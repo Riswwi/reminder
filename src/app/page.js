@@ -3,21 +3,42 @@
 import GlassCard from '@/components/GlassCard';
 import styles from './page.module.css';
 import { useState, useEffect } from 'react';
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 
 export default function Dashboard() {
-  const [tasks, setTasks] = useState([
-    { id: 1, title: 'Review PRs for web interface', time: '10:00 AM', completed: false },
-    { id: 2, title: 'Sync mobile app data', time: '14:30 PM', completed: true },
-    { id: 3, title: 'Update documentation', time: '16:00 PM', completed: false },
-  ]);
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const toggleTask = (id) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "tasks"), (snapshot) => {
+      const tasksData = [];
+      snapshot.forEach((doc) => {
+        tasksData.push({ id: doc.id, ...doc.data() });
+      });
+      setTasks(tasksData);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const toggleTask = async (id, currentStatus) => {
+    try {
+      await updateDoc(doc(db, "tasks", id), {
+        done: !currentStatus
+      });
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const completedCount = tasks.filter(t => t.completed).length;
+  const completedCount = tasks.filter(t => t.done).length;
   const totalCount = tasks.length;
   const progress = totalCount === 0 ? 0 : Math.round((completedCount / totalCount) * 100);
+  
+  // Show only up to 5 tasks today for dashboard
+  const todayTasks = tasks.slice(0, 5);
 
   return (
     <div className={styles.dashboard}>
@@ -68,28 +89,32 @@ export default function Dashboard() {
             <span style={{ color: 'var(--success)' }}>●</span>
             <span style={{ fontSize: '32px' }}>Active</span>
           </div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Last synced 2 mins ago</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Firebase Connected</p>
         </GlassCard>
       </div>
 
       <div className={styles.recentTasks}>
         <h2 style={{ fontSize: '24px', marginBottom: '16px' }}>Today's Tasks</h2>
         <GlassCard style={{ padding: '8px' }}>
-          {tasks.map(task => (
+          {loading ? (
+             <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading...</div>
+          ) : todayTasks.length === 0 ? (
+             <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-secondary)' }}>No tasks for today!</div>
+          ) : todayTasks.map(task => (
             <div key={task.id} className={styles.taskItem}>
               <div className={styles.taskInfo}>
                 <div 
                   className={styles.taskCheckbox}
-                  onClick={() => toggleTask(task.id)}
-                  style={task.completed ? { background: 'var(--accent-primary)', borderColor: 'var(--accent-primary)' } : {}}
+                  onClick={() => toggleTask(task.id, task.done)}
+                  style={task.done ? { background: 'var(--accent-primary)', borderColor: 'var(--accent-primary)' } : {}}
                 >
-                  {task.completed && <span style={{ color: '#fff', fontSize: '14px' }}>✓</span>}
+                  {task.done && <span style={{ color: '#fff', fontSize: '14px' }}>✓</span>}
                 </div>
-                <span className={styles.taskTitle} style={task.completed ? { textDecoration: 'line-through', color: 'var(--text-secondary)' } : {}}>
+                <span className={styles.taskTitle} style={task.done ? { textDecoration: 'line-through', color: 'var(--text-secondary)' } : {}}>
                   {task.title}
                 </span>
               </div>
-              <div className={styles.taskTime}>{task.time}</div>
+              <div className={styles.taskTime}>{task.time || task.dueDate}</div>
             </div>
           ))}
         </GlassCard>
