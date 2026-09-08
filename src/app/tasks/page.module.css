@@ -1,0 +1,146 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.primaryBtn {
+  background: var(--accent-gradient);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  transition: transform 0.2s ease;
+}
+
+.primaryBtn:hover {
+  transform: translateY(-2px);
+}
+
+.tabs {
+  display: flex;
+  gap: 12px;
+  border-bottom: 1px solid var(--glass-border);
+  padding-bottom: 12px;
+}
+
+.tab {
+  padding: 8px 16px;
+  border-radius: 20px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.tab:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.activeTab {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.listCard {
+  padding: 0;
+  overflow: hidden;
+}
+
+.taskList {
+  display: flex;
+  flex-direction: column;
+}
+
+.taskItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--glass-border);
+  transition: background 0.2s ease;
+}
+
+.taskItem:last-child {
+  border-bottom: none;
+}
+
+.taskItem:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.taskLeft {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.checkbox {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--accent-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.checkbox:hover {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.taskTitle {
+  font-weight: 500;
+  font-size: 16px;
+}
+
+.taskCategory {
+  font-size: 12px;
+  color: var(--accent-secondary);
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.taskRight {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.taskTime {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.moreBtn {
+  color: var(--text-secondary);
+  font-size: 20px;
+  padding: 0 8px;
+  border-radius: 4px;
+}
+
+.moreBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.emptyState {
+  padding: 48px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 16px;
+}
