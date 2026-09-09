@@ -1,14 +1,13 @@
 "use client";
 
-import GlassCard from '@/components/GlassCard';
-import styles from './page.module.css';
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, doc, updateDoc, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 export default function Dashboard() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sortMethod, setSortMethod] = useState('time'); // 'time' or 'priority'
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "tasks"), (snapshot) => {
@@ -33,109 +32,110 @@ export default function Dashboard() {
     }
   };
 
-  const addNewTask = async () => {
+  const deleteTask = async (id) => {
     try {
-      const newId = Date.now();
-      const taskRef = doc(db, "tasks", String(newId));
-      await setDoc(taskRef, {
-        id: newId,
-        title: "New Task from Dashboard",
-        dueDate: new Date().toISOString().split('T')[0],
-        time: "12:00",
-        done: false,
-        category: "General"
-      });
-    } catch (e) {
-      console.error("Error adding task: ", e);
+      if (window.confirm("Удалить событие? Это действие нельзя отменить.")) {
+        await deleteDoc(doc(db, "tasks", id));
+      }
+    } catch (error) {
+      console.error("Error deleting task: ", error);
     }
   };
 
-  const completedCount = tasks.filter(t => t.done).length;
-  const totalCount = tasks.length;
-  const progress = totalCount === 0 ? 0 : Math.round((completedCount / totalCount) * 100);
+  const activeTasks = tasks.filter(t => !t.done);
+  const completedTasks = tasks.filter(t => t.done);
   
-  // Show only up to 5 tasks today for dashboard
-  const todayTasks = tasks.slice(0, 5);
+  if (sortMethod === 'priority') {
+    activeTasks.sort((a, b) => (b.priority || 1) - (a.priority || 1));
+  }
 
+  // Simplified: just render all active tasks, and then a completed section
   return (
-    <div className={styles.dashboard}>
-      <div className={styles.header}>
-        <div>
-          <h1 className={styles.title}>Welcome back, <span className="text-gradient">Pro User</span></h1>
-          <p className={styles.subtitle}>Here is what's happening with your tasks today.</p>
+    <div className="view-container active" style={{ padding: '0 20px 20px', height: '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+      <div className="sort-controls">
+        <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Сортировка:</span>
+        <div className="sort-toggle">
+          <button 
+            className={`sort-btn ${sortMethod === 'time' ? 'active' : ''}`}
+            onClick={() => setSortMethod('time')}
+          >
+            По времени
+          </button>
+          <button 
+            className={`sort-btn ${sortMethod === 'priority' ? 'active' : ''}`}
+            onClick={() => setSortMethod('priority')}
+          >
+            По приоритету
+          </button>
         </div>
-        <button style={{
-          background: 'var(--accent-gradient)',
-          color: 'white',
-          padding: '12px 24px',
-          borderRadius: '12px',
-          fontWeight: '600',
-          boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
-          transition: 'transform 0.2s ease',
-        }}
-        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-        onClick={addNewTask}
-        >
-          + New Task
-        </button>
       </div>
 
-      <div className={styles.grid}>
-        <GlassCard>
-          <div className={styles.statLabel}>Today's Progress</div>
-          <div className={styles.statValue}>{progress}%</div>
-          <div style={{ background: 'rgba(255,255,255,0.1)', height: '8px', borderRadius: '4px', overflow: 'hidden' }}>
-            <div style={{ 
-              background: 'var(--accent-gradient)', 
-              height: '100%', 
-              width: `${progress}%`,
-              transition: 'width 1s ease-in-out'
-            }}></div>
-          </div>
-        </GlassCard>
-
-        <GlassCard>
-          <div className={styles.statLabel}>Upcoming Reminders</div>
-          <div className={styles.statValue}>{totalCount - completedCount}</div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Tasks left for today</p>
-        </GlassCard>
-
-        <GlassCard>
-          <div className={styles.statLabel}>Sync Status</div>
-          <div className={styles.statValue} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ color: 'var(--success)' }}>●</span>
-            <span style={{ fontSize: '32px' }}>Active</span>
-          </div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Firebase Connected</p>
-        </GlassCard>
-      </div>
-
-      <div className={styles.recentTasks}>
-        <h2 style={{ fontSize: '24px', marginBottom: '16px' }}>Today's Tasks</h2>
-        <GlassCard style={{ padding: '8px' }}>
-          {loading ? (
-             <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading...</div>
-          ) : todayTasks.length === 0 ? (
-             <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-secondary)' }}>No tasks for today!</div>
-          ) : todayTasks.map(task => (
-            <div key={task.id} className={styles.taskItem}>
-              <div className={styles.taskInfo}>
-                <div 
-                  className={styles.taskCheckbox}
-                  onClick={() => toggleTask(task.id, task.done)}
-                  style={task.done ? { background: 'var(--accent-primary)', borderColor: 'var(--accent-primary)' } : {}}
-                >
-                  {task.done && <span style={{ color: '#fff', fontSize: '14px' }}>✓</span>}
+      <div className="task-list-container">
+        {loading ? (
+          <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Загрузка...</div>
+        ) : activeTasks.length === 0 && completedTasks.length === 0 ? (
+           <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>У вас нет задач. Нажмите + чтобы создать.</div>
+        ) : (
+          <>
+            {activeTasks.map(task => (
+              <div key={task.id} className="task-item">
+                <div className="checkbox" onClick={() => toggleTask(task.id, task.done)}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                 </div>
-                <span className={styles.taskTitle} style={task.done ? { textDecoration: 'line-through', color: 'var(--text-secondary)' } : {}}>
-                  {task.title}
-                </span>
+                <div className="task-content">
+                  <div className="task-title">{task.title}</div>
+                  {task.desc && <div className="task-desc">{task.desc}</div>}
+                  <div className="task-badges">
+                    <span className="badge time-badge">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                      {task.time || 'Весь день'}
+                    </span>
+                    {task.priority && task.priority > 1 && (
+                      <span className="badge" style={{ color: task.priority === 3 ? '#FF453A' : '#FFD60A' }}>
+                        {task.priority === 3 ? 'Срочно' : 'В скором времени'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button className="delete-btn" onClick={() => deleteTask(task.id)}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
               </div>
-              <div className={styles.taskTime}>{task.time || task.dueDate}</div>
-            </div>
-          ))}
-        </GlassCard>
+            ))}
+
+            {completedTasks.length > 0 && (
+              <div className="completed-section">
+                <div className="completed-header">
+                  <div className="completed-header-chevron open">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                  </div>
+                  <div className="completed-header-text">Завершенные</div>
+                  <div className="completed-header-count">{completedTasks.length}</div>
+                </div>
+                <div className="completed-tasks-list">
+                  {completedTasks.map(task => (
+                    <div key={task.id} className="task-item done">
+                      <div className="checkbox" onClick={() => toggleTask(task.id, task.done)}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                      </div>
+                      <div className="task-content">
+                        <div className="task-title">{task.title}</div>
+                        <div className="task-badges">
+                          <span className="badge time-badge">
+                            {task.time || 'Весь день'}
+                          </span>
+                        </div>
+                      </div>
+                      <button className="delete-btn" onClick={() => deleteTask(task.id)}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
