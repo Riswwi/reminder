@@ -117,7 +117,7 @@ export default function CalendarPage() {
                 <div className="task-title">{task.title}</div>
                 <div className="task-badges">
                   <span className="badge time-badge">
-                    {task.time || 'Весь день'}
+                    {task.isAllDay ? 'Весь день' : (task.dueTime || '09:00')}
                   </span>
                 </div>
               </div>

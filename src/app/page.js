@@ -86,7 +86,7 @@ export default function Dashboard() {
                   <div className="task-badges">
                     <span className="badge time-badge">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                      {task.time || 'Весь день'}
+                      {task.isAllDay ? 'Весь день' : (task.dueTime || '09:00')}
                     </span>
                     {task.priority && task.priority > 1 && (
                       <span className="badge" style={{ color: task.priority === 3 ? '#FF453A' : '#FFD60A' }}>
@@ -120,7 +120,7 @@ export default function Dashboard() {
                         <div className="task-title">{task.title}</div>
                         <div className="task-badges">
                           <span className="badge time-badge">
-                            {task.time || 'Весь день'}
+                            {task.isAllDay ? 'Весь день' : (task.dueTime || '09:00')}
                           </span>
                         </div>
                       </div>
