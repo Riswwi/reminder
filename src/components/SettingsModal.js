@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-export default function SettingsModal({ isOpen, onClose, contentWidth, setContentWidth }) {
+export default function SettingsModal({ isOpen, onClose, contentWidth, setContentWidth, calendarWidth, setCalendarWidth }) {
   if (!isOpen) return null;
 
   return (
@@ -27,7 +27,23 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
               </div>
             </div>
           </div>
-
+          <div className="form-group" style={{ marginTop: '16px' }}>
+            <label>Ширина календаря ({calendarWidth}px)</label>
+            <div style={{ padding: '12px 16px', background: 'var(--surface-light)', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <input 
+                type="range" 
+                min="300" 
+                max="1000" 
+                value={calendarWidth} 
+                onChange={(e) => setCalendarWidth(Number(e.target.value))}
+                style={{ width: '100%' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-muted)' }}>
+                <span>Узкий</span>
+                <span>Широкий</span>
+              </div>
+            </div>
+          </div>
           <div className="form-group" style={{ marginTop: '16px' }}>
             <label>Уведомления</label>
             <div className="toggle-group" style={{ padding: '12px 16px', background: 'var(--surface-light)', borderRadius: '12px' }}>

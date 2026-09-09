@@ -66,7 +66,7 @@ export default function CalendarPage() {
 
   return (
     <div className="view-container active" style={{ padding: '0 20px 20px' }}>
-      <div className="calendar-wrapper" style={{ width: '100%' }}>
+      <div className="calendar-wrapper" style={{ width: '100%', maxWidth: 'var(--calendar-max-width, 400px)', margin: '0 auto' }}>
         <div className="calendar-header">
           <button className="icon-btn" onClick={() => changeMonth(-1)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>

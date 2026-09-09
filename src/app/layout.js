@@ -13,10 +13,13 @@ export default function RootLayout({ children }) {
   const [taskToEdit, setTaskToEdit] = useState(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [contentWidth, setContentWidth] = useState(800);
+  const [calendarWidth, setCalendarWidth] = useState(400);
 
   useEffect(() => {
     const saved = localStorage.getItem('custom_content_width');
     if (saved) setContentWidth(Number(saved));
+    const savedCal = localStorage.getItem('custom_calendar_width');
+    if (savedCal) setCalendarWidth(Number(savedCal));
 
     const handleOpenModal = (e) => {
       setTaskToEdit(e.detail || null);
@@ -31,10 +34,15 @@ export default function RootLayout({ children }) {
     localStorage.setItem('custom_content_width', val);
   };
 
+  const handleCalendarWidthChange = (val) => {
+    setCalendarWidth(val);
+    localStorage.setItem('custom_calendar_width', val);
+  };
+
   return (
     <html lang="ru">
       <body>
-        <div className="app-container" style={{ '--content-max-width': `${contentWidth}px` }}>
+        <div className="app-container" style={{ '--content-max-width': `${contentWidth}px`, '--calendar-max-width': `${calendarWidth}px` }}>
           <header>
             <div style={{ maxWidth: 'var(--content-max-width)', margin: '0 auto', width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div className="tabs">
@@ -65,6 +73,8 @@ export default function RootLayout({ children }) {
             onClose={() => setIsSettingsModalOpen(false)} 
             contentWidth={contentWidth}
             setContentWidth={handleWidthChange}
+            calendarWidth={calendarWidth}
+            setCalendarWidth={handleCalendarWidthChange}
           />
         </div>
       </body>

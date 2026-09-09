@@ -9,9 +9,13 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
   const [desc, setDesc] = useState('');
   const [priority, setPriority] = useState(1);
   const [isAllDay, setIsAllDay] = useState(true);
+  const [dueDate, setDueDate] = useState('');
+  const [dueTime, setDueTime] = useState('09:00');
   const [reminderOffset, setReminderOffset] = useState("-1");
   const [cyclicType, setCyclicType] = useState("none");
   const [repeatType, setRepeatType] = useState("none");
+
+  const [showDateSheet, setShowDateSheet] = useState(false);
 
   const [showReminderSheet, setShowReminderSheet] = useState(false);
   const [showCyclicSheet, setShowCyclicSheet] = useState(false);
@@ -22,11 +26,15 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
   useEffect(() => {
     let timeout;
     if (isOpen) {
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
       if (editTask) {
         setTitle(editTask.title || 'Новая задача');
         setDesc(editTask.desc || '');
         setPriority(editTask.priority || 1);
         setIsAllDay(editTask.isAllDay !== false);
+        setDueDate(editTask.dueDate || todayStr);
+        setDueTime(editTask.dueTime || '09:00');
         setReminderOffset(editTask.reminderOffset || "-1");
         setCyclicType(editTask.cyclicType || "none");
         setRepeatType(editTask.repeatType || "none");
@@ -35,6 +43,8 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
         setDesc('');
         setPriority(1);
         setIsAllDay(true);
+        setDueDate(todayStr);
+        setDueTime('09:00');
         setReminderOffset("-1");
         setCyclicType("none");
         setRepeatType("none");
@@ -62,8 +72,8 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
         title,
         desc,
         priority,
-        dueDate: todayStr, // simplified for now
-        dueTime: "09:00",
+        dueDate: dueDate || todayStr,
+        dueTime: isAllDay ? "09:00" : (dueTime || "09:00"),
         isAllDay,
         reminderOffset,
         customReminderMins: null,
@@ -140,16 +150,10 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
           </div>
 
           <div className="properties-list mt-4">
-            <div className="property-row">
+            <div className="property-row" onClick={() => setShowDateSheet(true)}>
               <div className="property-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></div>
               <div className="property-content">
-                <div className="property-title">Сегодня{isAllDay ? ', Весь день' : ''}</div>
-              </div>
-              <div className="property-action" onClick={(e) => e.stopPropagation()}>
-                <label className="switch">
-                  <input type="checkbox" checked={isAllDay} onChange={(e) => setIsAllDay(e.target.checked)} />
-                  <span className="slider round"></span>
-                </label>
+                <div className="property-title">{dueDate || 'Сегодня'}{isAllDay ? ', Весь день' : `, ${dueTime}`}</div>
               </div>
             </div>
 
@@ -272,6 +276,37 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                 <span>Каждый год</span>
               </label>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Date & Time Bottom Sheet */}
+      <div className={`bottom-sheet-overlay ${showDateSheet ? '' : 'hidden'}`} onClick={() => setShowDateSheet(false)}>
+        <div className="bottom-sheet-content" onClick={(e) => e.stopPropagation()}>
+          <div className="sheet-header">
+            <h3>Дата и время</h3>
+            <button className="btn-text primary-text" onClick={() => setShowDateSheet(false)}>Готово</button>
+          </div>
+          <div className="sheet-body scrollable-body">
+            <div className="form-group">
+              <label>Дата</label>
+              <input type="date" className="styled-input w-100" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </div>
+            
+            <div className="form-group toggle-group" style={{ marginTop: '20px', padding: '12px 16px', background: 'var(--surface-light)', borderRadius: '12px' }}>
+              <span style={{ fontSize: '16px', color: 'var(--text-color)' }}>Весь день</span>
+              <label className="switch">
+                <input type="checkbox" checked={isAllDay} onChange={(e) => setIsAllDay(e.target.checked)} />
+                <span className="slider round"></span>
+              </label>
+            </div>
+
+            {!isAllDay && (
+              <div className="form-group" style={{ marginTop: '20px' }}>
+                <label>Время</label>
+                <input type="time" className="styled-input w-100" value={dueTime} onChange={(e) => setDueTime(e.target.value)} />
+              </div>
+            )}
           </div>
         </div>
       </div>
