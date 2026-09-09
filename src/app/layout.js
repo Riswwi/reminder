@@ -5,19 +5,30 @@ import Link from 'next/link';
 import "./globals.css";
 import TaskModal from '@/components/TaskModal';
 import SettingsModal from '@/components/SettingsModal';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function RootLayout({ children }) {
   const pathname = usePathname();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [contentWidth, setContentWidth] = useState(800);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('custom_content_width');
+    if (saved) setContentWidth(Number(saved));
+  }, []);
+
+  const handleWidthChange = (val) => {
+    setContentWidth(val);
+    localStorage.setItem('custom_content_width', val);
+  };
 
   return (
     <html lang="ru">
       <body>
-        <div className="app-container">
+        <div className="app-container" style={{ '--content-max-width': `${contentWidth}px` }}>
           <header>
-            <div style={{ maxWidth: '800px', margin: '0 auto', width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ maxWidth: 'var(--content-max-width)', margin: '0 auto', width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div className="tabs">
                 <Link href="/">
                   <button className={`tab-btn ${pathname === '/' ? 'active' : ''}`}>Мои задачи</button>
@@ -41,7 +52,12 @@ export default function RootLayout({ children }) {
           </button>
           
           <TaskModal isOpen={isTaskModalOpen} onClose={() => setIsTaskModalOpen(false)} />
-          <SettingsModal isOpen={isSettingsModalOpen} onClose={() => setIsSettingsModalOpen(false)} />
+          <SettingsModal 
+            isOpen={isSettingsModalOpen} 
+            onClose={() => setIsSettingsModalOpen(false)} 
+            contentWidth={contentWidth}
+            setContentWidth={handleWidthChange}
+          />
         </div>
       </body>
     </html>

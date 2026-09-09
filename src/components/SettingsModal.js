@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-export default function SettingsModal({ isOpen, onClose }) {
+export default function SettingsModal({ isOpen, onClose, contentWidth, setContentWidth }) {
   if (!isOpen) return null;
 
   return (
@@ -10,6 +10,24 @@ export default function SettingsModal({ isOpen, onClose }) {
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <h2>Настройки</h2>
         <div className="settings-scroll-area">
+          <div className="form-group" style={{ marginTop: '16px' }}>
+            <label>Ширина интерфейса ({contentWidth}px)</label>
+            <div style={{ padding: '12px 16px', background: 'var(--surface-light)', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <input 
+                type="range" 
+                min="320" 
+                max="2000" 
+                value={contentWidth} 
+                onChange={(e) => setContentWidth(Number(e.target.value))}
+                style={{ width: '100%' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-muted)' }}>
+                <span>Узкий</span>
+                <span>На весь экран</span>
+              </div>
+            </div>
+          </div>
+
           <div className="form-group" style={{ marginTop: '16px' }}>
             <label>Уведомления</label>
             <div className="toggle-group" style={{ padding: '12px 16px', background: 'var(--surface-light)', borderRadius: '12px' }}>
