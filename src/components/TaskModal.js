@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { collection, doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -8,6 +8,13 @@ export default function TaskModal({ isOpen, onClose }) {
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [priority, setPriority] = useState(1);
+  const titleRef = useRef(null);
+
+  useEffect(() => {
+    if (isOpen && titleRef.current) {
+      setTimeout(() => titleRef.current.focus(), 50);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -48,6 +55,7 @@ export default function TaskModal({ isOpen, onClose }) {
         <div className="task-edit-top">
           <div className="task-edit-inputs">
             <input 
+              ref={titleRef}
               type="text" 
               className="input-title large" 
               placeholder="Новая задача" 

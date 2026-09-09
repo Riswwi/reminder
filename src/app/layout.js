@@ -13,8 +13,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="ru">
       <body>
-        {/* We restrict max width on desktop to simulate the phone feel */}
-        <div style={{ maxWidth: '600px', margin: '0 auto', height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', boxShadow: '0 0 20px rgba(0,0,0,0.5)', backgroundColor: 'var(--bg-color)' }}>
+        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', backgroundColor: 'var(--bg-color)' }}>
           <header>
             <div className="tabs">
               <Link href="/">

@@ -34,9 +34,7 @@ export default function Dashboard() {
 
   const deleteTask = async (id) => {
     try {
-      if (window.confirm("Удалить событие? Это действие нельзя отменить.")) {
-        await deleteDoc(doc(db, "tasks", id));
-      }
+      await deleteDoc(doc(db, "tasks", id));
     } catch (error) {
       console.error("Error deleting task: ", error);
     }
