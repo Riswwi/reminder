@@ -5,7 +5,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export default function TaskModal({ isOpen, onClose }) {
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState('Новая задача');
   const [desc, setDesc] = useState('');
   const [priority, setPriority] = useState(1);
   const [isAllDay, setIsAllDay] = useState(true);
@@ -20,7 +20,12 @@ export default function TaskModal({ isOpen, onClose }) {
 
   useEffect(() => {
     if (isOpen && titleRef.current) {
-      setTimeout(() => titleRef.current.focus(), 50);
+      setTimeout(() => {
+        titleRef.current.focus();
+        titleRef.current.select();
+      }, 50);
+    } else if (!isOpen) {
+      setTitle('Новая задача'); // Reset on close
     }
   }, [isOpen]);
 
