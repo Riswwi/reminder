@@ -4,7 +4,7 @@ import GlassCard from '@/components/GlassCard';
 import styles from './page.module.css';
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, setDoc } from 'firebase/firestore';
 
 export default function Dashboard() {
   const [tasks, setTasks] = useState([]);
@@ -33,6 +33,23 @@ export default function Dashboard() {
     }
   };
 
+  const addNewTask = async () => {
+    try {
+      const newId = Date.now();
+      const taskRef = doc(db, "tasks", String(newId));
+      await setDoc(taskRef, {
+        id: newId,
+        title: "New Task from Dashboard",
+        dueDate: new Date().toISOString().split('T')[0],
+        time: "12:00",
+        done: false,
+        category: "General"
+      });
+    } catch (e) {
+      console.error("Error adding task: ", e);
+    }
+  };
+
   const completedCount = tasks.filter(t => t.done).length;
   const totalCount = tasks.length;
   const progress = totalCount === 0 ? 0 : Math.round((completedCount / totalCount) * 100);
@@ -58,6 +75,7 @@ export default function Dashboard() {
         }}
         onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
         onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+        onClick={addNewTask}
         >
           + New Task
         </button>

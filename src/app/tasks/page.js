@@ -4,7 +4,7 @@ import GlassCard from '@/components/GlassCard';
 import styles from './page.module.css';
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, doc, updateDoc, addDoc, query, orderBy, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, addDoc, query, orderBy, setDoc, deleteDoc } from 'firebase/firestore';
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState([]);
@@ -54,6 +54,16 @@ export default function TasksPage() {
       });
     } catch (e) {
       console.error("Error adding task: ", e);
+    }
+  };
+
+  const deleteTask = async (id) => {
+    try {
+      if (window.confirm("Are you sure you want to delete this task?")) {
+        await deleteDoc(doc(db, "tasks", id));
+      }
+    } catch (error) {
+      console.error("Error deleting task: ", error);
     }
   };
 
@@ -110,7 +120,7 @@ export default function TasksPage() {
                 </div>
                 <div className={styles.taskRight}>
                   <div className={styles.taskTime}>{task.time || task.dueDate}</div>
-                  <button className={styles.moreBtn}>⋮</button>
+                  <button className={styles.moreBtn} onClick={() => deleteTask(task.id)} title="Delete Task">🗑️</button>
                 </div>
               </div>
             ))}
