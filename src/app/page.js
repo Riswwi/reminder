@@ -49,7 +49,7 @@ export default function Dashboard() {
 
   // Simplified: just render all active tasks, and then a completed section
   return (
-    <div className="view-container active" style={{ padding: '0 20px 20px', height: '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+    <div className="view-container active" style={{ padding: '0 20px 20px', display: 'flex', flexDirection: 'column' }}>
       <div className="sort-controls">
         <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Сортировка:</span>
         <div className="sort-toggle">
