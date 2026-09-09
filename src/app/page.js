@@ -14,7 +14,7 @@ export default function Dashboard() {
     const unsubscribe = onSnapshot(collection(db, "tasks"), (snapshot) => {
       const tasksData = [];
       snapshot.forEach((doc) => {
-        tasksData.push({ id: doc.id, ...doc.data() });
+        tasksData.push({ ...doc.data(), id: String(doc.id) });
       });
       setTasks(tasksData);
       setLoading(false);

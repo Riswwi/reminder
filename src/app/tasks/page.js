@@ -16,7 +16,7 @@ export default function TasksPage() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const tasksData = [];
       snapshot.forEach((doc) => {
-        tasksData.push({ id: doc.id, ...doc.data() });
+        tasksData.push({ ...doc.data(), id: String(doc.id) });
       });
       // Sort tasks by time locally or assume they have some order
       setTasks(tasksData);
