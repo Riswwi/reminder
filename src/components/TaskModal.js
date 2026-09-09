@@ -13,10 +13,9 @@ export default function TaskModal({ isOpen, onClose }) {
   const [cyclicType, setCyclicType] = useState("none");
   const [repeatType, setRepeatType] = useState("none");
 
-  // Bottom sheets toggles
   const [showReminderSheet, setShowReminderSheet] = useState(false);
-
-  const titleRef = useRef(null);
+  const [showCyclicSheet, setShowCyclicSheet] = useState(false);
+  const [showRepeatSheet, setShowRepeatSheet] = useState(false);
 
   useEffect(() => {
     if (isOpen && titleRef.current) {
@@ -138,18 +137,18 @@ export default function TaskModal({ isOpen, onClose }) {
               </div>
             </div>
 
-            <div className="property-row" onClick={() => alert("Эта кнопка пока не подключена на вебе, но скоро будет!")}>
+            <div className="property-row" onClick={() => setShowCyclicSheet(true)}>
               <div className="property-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12A10 10 0 0 0 22 12"></path><path d="M12 2A10 10 0 0 0 2 12"></path><polyline points="1 7 5 12 1 12"></polyline></svg></div>
               <div className="property-content">
-                <div className="property-title">Без цикла</div>
+                <div className="property-title">{cyclicType === "none" ? "Без цикла" : cyclicType === "1h" ? "Каждый час" : cyclicType === "2h" ? "Каждые 2 часа" : "Каждые 4 часа"}</div>
                 <div className="property-subtitle">Цикличное напоминание</div>
               </div>
             </div>
 
-            <div className="property-row" onClick={() => alert("Эта кнопка пока не подключена на вебе, но скоро будет!")}>
+            <div className="property-row" onClick={() => setShowRepeatSheet(true)}>
               <div className="property-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M22 14l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg></div>
               <div className="property-content">
-                <div className="property-title">Не повторяется</div>
+                <div className="property-title">{repeatType === "none" ? "Не повторяется" : repeatType === "daily" ? "Каждый день" : repeatType === "weekly" ? "Каждую неделю" : repeatType === "monthly" ? "Каждый месяц" : "Каждый год"}</div>
               </div>
             </div>
           </div>
@@ -181,6 +180,72 @@ export default function TaskModal({ isOpen, onClose }) {
               <label className="radio-item">
                 <input type="radio" name="rem" value="60" checked={reminderOffset === "60"} onChange={(e) => setReminderOffset(e.target.value)} />
                 <span>За 1 час</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Cyclic Bottom Sheet */}
+      <div className={`bottom-sheet-overlay ${showCyclicSheet ? '' : 'hidden'}`} onClick={() => setShowCyclicSheet(false)}>
+        <div className="bottom-sheet-content" onClick={(e) => e.stopPropagation()}>
+          <div className="sheet-header">
+            <h3>Цикличность</h3>
+            <button className="btn-text primary-text" onClick={() => setShowCyclicSheet(false)}>Готово</button>
+          </div>
+          <div className="sheet-body scrollable-body">
+            <span className="section-label">Выберите цикл</span>
+            <div className="radio-list">
+              <label className="radio-item">
+                <input type="radio" name="cyc" value="none" checked={cyclicType === "none"} onChange={(e) => setCyclicType(e.target.value)} />
+                <span>Без цикла</span>
+              </label>
+              <label className="radio-item">
+                <input type="radio" name="cyc" value="1h" checked={cyclicType === "1h"} onChange={(e) => setCyclicType(e.target.value)} />
+                <span>Каждый час</span>
+              </label>
+              <label className="radio-item">
+                <input type="radio" name="cyc" value="2h" checked={cyclicType === "2h"} onChange={(e) => setCyclicType(e.target.value)} />
+                <span>Каждые 2 часа</span>
+              </label>
+              <label className="radio-item">
+                <input type="radio" name="cyc" value="4h" checked={cyclicType === "4h"} onChange={(e) => setCyclicType(e.target.value)} />
+                <span>Каждые 4 часа</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Repeat Bottom Sheet */}
+      <div className={`bottom-sheet-overlay ${showRepeatSheet ? '' : 'hidden'}`} onClick={() => setShowRepeatSheet(false)}>
+        <div className="bottom-sheet-content" onClick={(e) => e.stopPropagation()}>
+          <div className="sheet-header">
+            <h3>Повтор</h3>
+            <button className="btn-text primary-text" onClick={() => setShowRepeatSheet(false)}>Готово</button>
+          </div>
+          <div className="sheet-body scrollable-body">
+            <span className="section-label">Выберите повтор</span>
+            <div className="radio-list">
+              <label className="radio-item">
+                <input type="radio" name="rep" value="none" checked={repeatType === "none"} onChange={(e) => setRepeatType(e.target.value)} />
+                <span>Не повторяется</span>
+              </label>
+              <label className="radio-item">
+                <input type="radio" name="rep" value="daily" checked={repeatType === "daily"} onChange={(e) => setRepeatType(e.target.value)} />
+                <span>Каждый день</span>
+              </label>
+              <label className="radio-item">
+                <input type="radio" name="rep" value="weekly" checked={repeatType === "weekly"} onChange={(e) => setRepeatType(e.target.value)} />
+                <span>Каждую неделю</span>
+              </label>
+              <label className="radio-item">
+                <input type="radio" name="rep" value="monthly" checked={repeatType === "monthly"} onChange={(e) => setRepeatType(e.target.value)} />
+                <span>Каждый месяц</span>
+              </label>
+              <label className="radio-item">
+                <input type="radio" name="rep" value="yearly" checked={repeatType === "yearly"} onChange={(e) => setRepeatType(e.target.value)} />
+                <span>Каждый год</span>
               </label>
             </div>
           </div>
