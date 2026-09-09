@@ -17,6 +17,8 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
   const [showCyclicSheet, setShowCyclicSheet] = useState(false);
   const [showRepeatSheet, setShowRepeatSheet] = useState(false);
 
+  const titleRef = useRef(null);
+
   useEffect(() => {
     let timeout;
     if (isOpen) {
