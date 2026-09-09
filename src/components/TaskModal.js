@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
-export default function TaskModal({ isOpen, onClose }) {
+export default function TaskModal({ isOpen, onClose, editTask = null }) {
   const [title, setTitle] = useState('Новая задача');
   const [desc, setDesc] = useState('');
   const [priority, setPriority] = useState(1);
@@ -18,15 +18,32 @@ export default function TaskModal({ isOpen, onClose }) {
   const [showRepeatSheet, setShowRepeatSheet] = useState(false);
 
   useEffect(() => {
-    if (isOpen && titleRef.current) {
-      setTimeout(() => {
-        titleRef.current.focus();
-        titleRef.current.select();
+    let timeout;
+    if (isOpen) {
+      if (editTask) {
+        setTitle(editTask.title || 'Новая задача');
+        setDesc(editTask.desc || '');
+        setPriority(editTask.priority || 1);
+        setIsAllDay(editTask.isAllDay !== false);
+        setReminderOffset(editTask.reminderOffset || "-1");
+        setCyclicType(editTask.cyclicType || "none");
+        setRepeatType(editTask.repeatType || "none");
+      } else {
+        setTitle('Новая задача');
+        setDesc('');
+        setPriority(1);
+        setIsAllDay(true);
+        setReminderOffset("-1");
+        setCyclicType("none");
+        setRepeatType("none");
+      }
+      timeout = setTimeout(() => {
+        titleRef.current?.focus();
+        titleRef.current?.select();
       }, 50);
-    } else if (!isOpen) {
-      setTitle('Новая задача'); // Reset on close
     }
-  }, [isOpen]);
+    return () => clearTimeout(timeout);
+  }, [isOpen, editTask]);
 
   if (!isOpen) return null;
 
@@ -39,9 +56,7 @@ export default function TaskModal({ isOpen, onClose }) {
       const now = new Date();
       const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
 
-      // Match APK schema exactly for sync
-      await setDoc(taskRef, {
-        id: newId,
+      const taskData = {
         title,
         desc,
         priority,
@@ -55,9 +70,16 @@ export default function TaskModal({ isOpen, onClose }) {
         repeatType,
         repeatWeekdays: [],
         customRepeat: null,
-        done: false,
+        done: editTask ? editTask.done : false,
         fileData: null
-      });
+      };
+
+      if (editTask) {
+        await updateDoc(doc(db, "tasks", String(editTask.id)), taskData);
+      } else {
+        taskData.id = newId;
+        await setDoc(taskRef, taskData);
+      }
 
       setTitle('');
       setDesc('');

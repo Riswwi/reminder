@@ -8,6 +8,7 @@ export default function Dashboard() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sortMethod, setSortMethod] = useState('time'); // 'time' or 'priority'
+  const [showCompleted, setShowCompleted] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "tasks"), (snapshot) => {
@@ -77,10 +78,10 @@ export default function Dashboard() {
           <>
             {activeTasks.map(task => (
               <div key={task.id} className="task-item">
-                <div className="checkbox" onClick={() => toggleTask(task.id, task.done)}>
+                <div className="checkbox" onClick={(e) => { e.stopPropagation(); toggleTask(task.id, task.done); }}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                 </div>
-                <div className="task-content">
+                <div className="task-content" style={{ cursor: 'pointer' }} onClick={() => window.dispatchEvent(new CustomEvent('openTaskModal', { detail: task }))}>
                   <div className="task-title">{task.title}</div>
                   {task.desc && <div className="task-desc">{task.desc}</div>}
                   <div className="task-badges">
@@ -103,33 +104,35 @@ export default function Dashboard() {
 
             {completedTasks.length > 0 && (
               <div className="completed-section">
-                <div className="completed-header">
-                  <div className="completed-header-chevron open">
+                <div className="completed-header" onClick={() => setShowCompleted(!showCompleted)} style={{ cursor: 'pointer' }}>
+                  <div className={`completed-header-chevron ${showCompleted ? 'open' : ''}`}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
                   </div>
                   <div className="completed-header-text">Завершенные</div>
                   <div className="completed-header-count">{completedTasks.length}</div>
                 </div>
-                <div className="completed-tasks-list">
-                  {completedTasks.map(task => (
-                    <div key={task.id} className="task-item done">
-                      <div className="checkbox" onClick={() => toggleTask(task.id, task.done)}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                      </div>
-                      <div className="task-content">
-                        <div className="task-title">{task.title}</div>
-                        <div className="task-badges">
-                          <span className="badge time-badge">
-                            {task.isAllDay ? 'Весь день' : (task.dueTime || '09:00')}
-                          </span>
+                {showCompleted && (
+                  <div className="completed-tasks-list">
+                    {completedTasks.map(task => (
+                      <div key={task.id} className="task-item done">
+                        <div className="checkbox" onClick={(e) => { e.stopPropagation(); toggleTask(task.id, task.done); }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                         </div>
+                        <div className="task-content" style={{ cursor: 'pointer' }} onClick={() => window.dispatchEvent(new CustomEvent('openTaskModal', { detail: task }))}>
+                          <div className="task-title">{task.title}</div>
+                          <div className="task-badges">
+                            <span className="badge time-badge">
+                              {task.isAllDay ? 'Весь день' : (task.dueTime || '09:00')}
+                            </span>
+                          </div>
+                        </div>
+                        <button className="delete-btn" onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
                       </div>
-                      <button className="delete-btn" onClick={() => deleteTask(task.id)}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </>
