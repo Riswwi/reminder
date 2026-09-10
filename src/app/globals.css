@@ -163,52 +163,44 @@ main {
 
 /* ── Task Row ────────────────────────────────────────────────── */
 .task-row {
-  display: flex; align-items: center; gap: 14px;
-  padding: 14px 16px; margin-bottom: 4px;
+  display: flex; align-items: center; gap: 16px;
+  padding: 16px 20px; margin-bottom: 6px;
   border-radius: 16px;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.025);
   transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.035);
 }
 .task-row:hover {
   background: var(--surface-color);
-  border-color: rgba(255, 255, 255, 0.08);
+  border-color: transparent;
   transform: translateY(-1px) scale(1.005);
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
 }
 .task-row.done { opacity: 0.45; background: transparent; transform: none; box-shadow: none; }
 .task-row.done .task-row-title { text-decoration: line-through; color: var(--text-muted); }
 
-.task-row-stripe {
-  position: absolute; left: 0; top: 12px; bottom: 12px;
-  width: 4px; border-radius: 0 4px 4px 0;
-  flex-shrink: 0;
-  transition: height 0.2s;
-}
-
 .task-row-check {
-  width: 24px; height: 24px; border-radius: 50%;
+  width: 26px; height: 26px; border-radius: 50%;
   border: 2px solid var(--border-color);
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; flex-shrink: 0;
   transition: all 0.25s; background: transparent;
-  margin-left: 8px;
 }
 .task-row-check:hover { opacity: 0.75; transform: scale(1.1); }
 .task-row-check.checked svg { opacity: 1; transform: scale(1); }
-.task-row-check svg { width: 14px; height: 14px; color: #111; opacity: 0; transition: all 0.2s; transform: scale(0.5); }
+.task-row-check svg { width: 15px; height: 15px; color: #111; opacity: 0; transition: all 0.2s; transform: scale(0.5); }
 
 .task-row-content { flex: 1; min-width: 0; }
 .task-row-title {
-  font-size: 15px; font-weight: 600;
+  font-size: 17px; font-weight: 500;
   line-height: 1.4; word-break: break-word;
 }
 .task-row-desc {
-  font-size: 13px; color: var(--text-muted);
-  margin-top: 4px; white-space: nowrap;
+  font-size: 14px; color: var(--text-muted);
+  margin-top: 5px; white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis;
 }
 
@@ -672,9 +664,9 @@ input:checked + .slider:before { transform: translateX(22px); }
 .cal-task-check.checked svg { opacity: 1; }
 
 .cal-task-body { flex: 1; min-width: 0; }
-.cal-task-title { font-size: 15px; font-weight: 600; margin-bottom: 3px; }
-.cal-task-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
-.cal-task-time { font-size: 12px; color: var(--text-muted); }
+.cal-task-title { font-size: 17px; font-weight: 500; margin-bottom: 4px; line-height: 1.4; }
+.cal-task-desc { font-size: 14px; color: var(--text-muted); margin-bottom: 6px; }
+.cal-task-time { font-size: 12px; color: var(--text-muted); font-weight: 500; }
 
 .cal-done-section { margin-top: 20px; }
 .cal-done-label {

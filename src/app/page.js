@@ -67,9 +67,6 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
   return (
     <>
       <div className={`task-row ${task.done ? 'done' : ''}`} onClick={() => onEdit(task)}>
-        {/* Priority stripe */}
-        <div className="task-row-stripe" style={{ background: p.accent }} />
-
         {/* Checkbox */}
         <div
           className={`task-row-check ${task.done ? 'checked' : ''}`}
