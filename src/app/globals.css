@@ -208,40 +208,99 @@ main {
 .fab:active { transform: scale(0.92); }
 .fab svg { width: 26px; height: 26px; }
 
-/* ── Full-screen Task Modal ───────────────────────────────────── */
-.full-modal {
-  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  background-color: var(--bg-color); z-index: 100;
-  display: flex; flex-direction: column;
-  animation: modalIn 0.28s cubic-bezier(0.175,0.885,0.32,1);
-}
-@keyframes modalIn {
-  from { transform: translateY(100%); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
-}
-.full-modal.hidden { display: none; }
-
-.full-modal-header {
-  padding: 16px 20px 14px;
-  display: flex; justify-content: space-between; align-items: center;
-  background: rgba(15,15,17,0.9);
+/* ── Task Modal (center dialog) ──────────────────────────────── */
+.task-modal-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,0.7);
   backdrop-filter: blur(12px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  animation: overlayIn 0.2s ease;
+}
+@keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
+
+.task-modal-box {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  width: 100%; max-width: 860px;
+  max-height: 90vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 32px 100px rgba(0,0,0,0.6);
+  animation: boxIn 0.25s cubic-bezier(0.175,0.885,0.32,1.275);
+  overflow: hidden;
+}
+@keyframes boxIn {
+  from { transform: scale(0.94) translateY(16px); opacity: 0; }
+  to   { transform: scale(1)    translateY(0);    opacity: 1; }
+}
+
+.task-modal-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 20px 12px;
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
-.full-modal-content {
-  flex: 1;
-  padding: 20px 24px 100px;
+.task-modal-esc-hint {
+  font-size: 11px; font-weight: 700;
+  color: var(--text-muted);
+  background: var(--surface-light);
+  padding: 2px 6px; border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.task-modal-body {
+  display: flex; flex: 1; overflow: hidden;
+}
+
+/* Left col: calendar + time */
+.task-modal-left {
+  width: 280px; flex-shrink: 0;
+  border-right: 1px solid var(--border-color);
+  padding: 20px 16px;
   overflow-y: auto;
-  max-width: 720px;
-  margin: 0 auto;
-  width: 100%;
+  background: rgba(255,255,255,0.02);
+}
+
+.task-modal-allday {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 4px;
+  border-top: 1px solid var(--border-color);
+  margin-top: 12px;
+  font-size: 15px; color: var(--text-color);
+}
+
+.task-modal-time-section { margin-top: 16px; }
+.task-modal-time-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px;
+}
+
+/* Right col: title + properties */
+.task-modal-right {
+  flex: 1; min-width: 0;
+  padding: 20px 24px;
+  overflow-y: auto;
 }
 
 /* ── Task edit layout ────────────────────────────────────────── */
 .task-edit-top { display: flex; align-items: flex-start; gap: 16px; }
 .task-edit-inputs { flex: 1; min-width: 0; }
 .priority-selector-col { display: flex; flex-direction: column; gap: 10px; padding-top: 6px; flex-shrink: 0; }
+
+/* ── Full-screen Task Modal (legacy, keep for compat) ─────────  */
+.full-modal {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background-color: var(--bg-color); z-index: 100;
+  display: flex; flex-direction: column;
+}
+.full-modal.hidden { display: none; }
+.full-modal-header {
+  padding: 16px 20px 14px; display: flex; justify-content: space-between; align-items: center;
+  background: rgba(15,15,17,0.9); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-color); flex-shrink: 0;
+}
+.full-modal-content { flex: 1; padding: 20px 24px 100px; overflow-y: auto; max-width: 720px; margin: 0 auto; width: 100%; }
 
 .input-title.large {
   width: 100%; background: transparent; border: none;
@@ -615,6 +674,89 @@ input:checked + .slider:before { transform: translateX(22px); }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── Mini Calendar (modal left panel) ────────────────────────── */
+.mc-wrap { width: 100%; }
+.mc-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.mc-month { font-size: 14px; font-weight: 700; }
+.mc-nav {
+  width: 28px; height: 28px; border-radius: 50%; border: none;
+  background: var(--surface-light); color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background 0.15s;
+}
+.mc-nav:hover { background: var(--border-color); color: var(--text-color); }
+.mc-nav svg { width: 14px; height: 14px; }
+
+.mc-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.mc-wday {
+  text-align: center; font-size: 10px; font-weight: 700;
+  color: var(--text-muted); text-transform: uppercase; padding: 4px 0;
+}
+.mc-day {
+  aspect-ratio: 1;
+  border: none; border-radius: 8px; background: transparent;
+  color: var(--text-color); font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: background 0.12s, color 0.12s;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.mc-day:hover { background: var(--surface-light); }
+.mc-day.today { color: var(--primary-color); font-weight: 700; }
+.mc-day.today::after {
+  content: ''; position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
+  width: 4px; height: 4px; border-radius: 50%; background: var(--primary-color);
+}
+.mc-day.selected { background: var(--primary-color); color: #fff; font-weight: 700; }
+.mc-day.selected::after { display: none; }
+.mc-footer { text-align: center; padding-top: 8px; }
+
+/* ── Time Picker ──────────────────────────────────────────────── */
+.tp-wrap {
+  display: flex; align-items: flex-start; gap: 0;
+  background: var(--bg-color);
+  border-radius: 14px; overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+.tp-col {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center;
+}
+.tp-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.8px; color: var(--text-muted);
+  padding: 8px 0 4px; width: 100%; text-align: center;
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(255,255,255,0.03);
+}
+.tp-scroll {
+  width: 100%; max-height: 180px; overflow-y: auto;
+  scrollbar-width: none;
+}
+.tp-scroll::-webkit-scrollbar { display: none; }
+.tp-item {
+  width: 100%; padding: 9px 4px;
+  border: none; background: transparent;
+  color: var(--text-muted); font-size: 20px; font-weight: 600;
+  cursor: pointer; transition: background 0.12s, color 0.12s;
+  text-align: center; font-family: 'Inter', monospace;
+}
+.tp-item:hover { background: var(--surface-light); color: var(--text-color); }
+.tp-item.active {
+  color: var(--primary-color); font-weight: 800;
+  background: rgba(10,132,255,0.12);
+}
+.tp-sep {
+  font-size: 22px; font-weight: 700; color: var(--primary-color);
+  padding-top: 48px; padding-left: 2px; padding-right: 2px;
+  flex-shrink: 0;
+}
+
 /* ── Responsive ──────────────────────────────────────────────── */
 @media (max-width: 700px) {
   .cal-page-layout { flex-direction: column; padding: 12px 16px; gap: 16px; overflow-y: auto; }
@@ -624,9 +766,17 @@ input:checked + .slider:before { transform: translateX(22px); }
   .view-container { padding: 0 16px; }
   header { padding: 14px 16px; }
   .full-modal-content { padding: 16px 16px 100px; }
+
+  .task-modal-overlay { padding: 0; align-items: flex-end; }
+  .task-modal-box { max-width: 100%; max-height: 95vh; border-radius: 24px 24px 0 0; }
+  .task-modal-body { flex-direction: column; }
+  .task-modal-left { width: 100%; border-right: none; border-bottom: 1px solid var(--border-color); }
+  .task-modal-right { padding: 16px; }
 }
 
 @media (min-width: 1400px) {
   :root { --content-max-width: 1100px; }
   .cal-panel { width: 400px; }
+  .task-modal-box { max-width: 960px; }
+  .task-modal-left { width: 320px; }
 }
