@@ -6,7 +6,7 @@ import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/fire
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 const P_COLORS = {
-  1: { accent: '#30D158', dim: 'rgba(48,209,88,0.1)',  border: 'rgba(48,209,88,0.2)' },
+  1: { accent: '#5E5CE6', dim: 'rgba(94,92,230,0.1)',  border: 'rgba(94,92,230,0.2)' },
   2: { accent: '#FF9F0A', dim: 'rgba(255,159,10,0.1)', border: 'rgba(255,159,10,0.2)' },
   3: { accent: '#FF453A', dim: 'rgba(255,69,58,0.1)',  border: 'rgba(255,69,58,0.2)'  },
 };
