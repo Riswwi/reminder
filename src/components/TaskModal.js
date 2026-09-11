@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { doc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -15,7 +15,7 @@ function toDateStr(d) {
 const todayStr = () => toDateStr(new Date());
 
 // ─── Mini Calendar ────────────────────────────────────────────────────────────
-function MiniCalendar({ value, onChange }) {
+function MiniCalendar({ value, onChange, tasks = [] }) {
   const init = value ? new Date(value + 'T00:00:00') : new Date();
   const [nav, setNav] = useState(() => { const d = new Date(init); d.setDate(1); return d; });
 
@@ -46,8 +46,10 @@ function MiniCalendar({ value, onChange }) {
       </div>
       <div className="mc-grid">
         {WEEKDAYS_SHORT.map(w => <div key={w} className="mc-wday">{w}</div>)}
-        {cells.map((cell, i) =>
-          cell === null ? <div key={`e${i}`} /> : (
+        {cells.map((cell, i) => {
+          if (cell === null) return <div key={`e${i}`} />;
+          const hasTasks = tasks.some(t => t.dueDate === cell.ds && !t.done);
+          return (
             <button
               key={cell.ds}
               type="button"
@@ -55,9 +57,10 @@ function MiniCalendar({ value, onChange }) {
               onClick={() => onChange(cell.ds)}
             >
               {cell.d}
+              {hasTasks && <div className="mc-dot" />}
             </button>
-          )
-        )}
+          );
+        })}
       </div>
       <div className="mc-footer">
         <button type="button" className="btn-text primary-text" style={{ fontSize: 12 }}
@@ -172,6 +175,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
   const [cyclic, setCyclic]     = useState('none');
   const [repeat, setRepeat]     = useState('none');
   const [isSaving, setIsSaving] = useState(false);
+  const [tasks, setTasks]       = useState([]);
 
   const [showRemSheet,    setShowRemSheet]    = useState(false);
   const [showCyclicSheet, setShowCyclicSheet] = useState(false);
@@ -189,6 +193,16 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
       return () => document.removeEventListener('keydown', onKey);
     }
   }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const unsub = onSnapshot(collection(db, 'tasks'), snapshot => {
+      const arr = [];
+      snapshot.forEach(d => arr.push(d.data()));
+      setTasks(arr);
+    });
+    return () => unsub();
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -287,7 +301,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
 
             {/* Left: Calendar + Time */}
             <div className="task-modal-left">
-              <MiniCalendar value={dueDate} onChange={setDueDate} />
+              <MiniCalendar value={dueDate} onChange={setDueDate} tasks={tasks} />
 
               <div className="task-modal-allday">
                 <span>Весь день</span>
@@ -301,6 +315,20 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                 <div className="task-modal-time-label">Время</div>
                 <TimePicker value={dueTime} onChange={t => { setDueTime(t); setIsAllDay(false); }} />
               </div>
+
+              {tasks.filter(t => t.dueDate === dueDate && !t.done && t.id !== editTask?.id).length > 0 && (
+                <div className="selected-date-tasks">
+                  <div className="sdt-header">Задачи на этот день:</div>
+                  <div className="sdt-list">
+                    {tasks.filter(t => t.dueDate === dueDate && !t.done && t.id !== editTask?.id).map(t => (
+                      <div key={t.id} className="sdt-item">
+                        <div className="sdt-dot" />
+                        <span className="sdt-title">{t.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Right: Task details */}
