@@ -906,15 +906,16 @@ input:checked + .slider:before { transform: translateX(22px); }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* -- Mini Calendar Dot -------------------------------------- */
+/* ── Mini Calendar Dot ────────────────────────────────────── */
 .mc-dot {
   position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
   width: 4px; height: 4px; border-radius: 50%;
   background: var(--primary-color);
 }
-.mc-day.today .mc-dot {
-  display: none; /* Already has a dot for today */
-}
 .mc-day.selected .mc-dot {
   background: #fff;
+}
+/* Hide today's ::after dot if there is an mc-dot so they don't overlap */
+.mc-day.today:has(.mc-dot)::after {
+  display: none;
 }

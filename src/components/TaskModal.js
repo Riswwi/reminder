@@ -198,7 +198,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
     if (!isOpen) return;
     const unsub = onSnapshot(collection(db, 'tasks'), snapshot => {
       const arr = [];
-      snapshot.forEach(d => arr.push(d.data()));
+      snapshot.forEach(d => arr.push({ id: String(d.id), ...d.data() }));
       setTasks(arr);
     });
     return () => unsub();
