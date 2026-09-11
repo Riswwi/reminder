@@ -176,7 +176,7 @@ main {
 .task-row:hover {
   background: var(--surface-color);
   border-color: transparent;
-  transform: translateY(-1px) scale(1.005);
+  transform: translateY(-1px);
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
 }
 .task-row.done { opacity: 0.45; background: transparent; transform: none; box-shadow: none; }
@@ -292,7 +292,7 @@ main {
   border: 1px solid var(--border-color);
   border-radius: 24px;
   width: 100%; max-width: 1150px;
-  max-height: 90vh;
+  max-height: 96vh;
   display: flex; flex-direction: column;
   box-shadow: 0 32px 100px rgba(0,0,0,0.6);
   animation: boxIn 0.25s cubic-bezier(0.175,0.885,0.32,1.275);
@@ -325,10 +325,12 @@ main {
 .task-modal-left {
   width: 380px; flex-shrink: 0;
   border-right: 1px solid var(--border-color);
-  padding: 20px 16px;
+  padding: 16px;
   overflow-y: auto;
+  scrollbar-width: none;
   background: rgba(255,255,255,0.02);
 }
+.task-modal-left::-webkit-scrollbar { display: none; }
 
 .task-modal-allday {
   display: flex; align-items: center; justify-content: space-between;
@@ -803,7 +805,7 @@ input:checked + .slider:before { transform: translateX(22px); }
   background: rgba(255,255,255,0.03);
 }
 .tp-scroll {
-  width: 100%; max-height: 180px; overflow-y: auto;
+  width: 100%; max-height: 130px; overflow-y: auto;
   scrollbar-width: none;
 }
 .tp-scroll::-webkit-scrollbar { display: none; }
@@ -821,7 +823,7 @@ input:checked + .slider:before { transform: translateX(22px); }
 }
 .tp-sep {
   font-size: 22px; font-weight: 700; color: var(--primary-color);
-  padding-top: 48px; padding-left: 2px; padding-right: 2px;
+  padding-top: 32px; padding-left: 2px; padding-right: 2px;
   flex-shrink: 0;
 }
 
