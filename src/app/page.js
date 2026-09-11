@@ -129,6 +129,21 @@ export default function Dashboard() {
     const unsub = onSnapshot(collection(db, 'tasks'), (snap) => {
       const data = [];
       snap.forEach(d => data.push({ ...d.data(), id: String(d.id) }));
+      
+      // Rollover missed tasks to today
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+      const updates = [];
+      data.forEach(t => {
+        if (!t.done && t.dueDate && t.dueDate < todayStr) {
+          t.dueDate = todayStr;
+          updates.push(updateDoc(doc(db, 'tasks', t.id), { dueDate: todayStr }));
+        }
+      });
+      if (updates.length > 0) {
+        Promise.all(updates).catch(e => console.error('Rollover error:', e));
+      }
+
       setTasks(data);
       setLoading(false);
     });
