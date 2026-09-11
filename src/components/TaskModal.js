@@ -276,7 +276,24 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
   return (
     <>
       <div className="task-modal-overlay" onClick={onClose}>
-        <div className="task-modal-box" onClick={e => e.stopPropagation()}>
+        <div className="task-modal-wrapper" style={{ position: 'relative', display: 'flex', width: '100%', maxWidth: '1150px', justifyContent: 'center' }} onClick={e => e.stopPropagation()}>
+
+          {/* LEFT DRAWER (Selected date tasks) */}
+          {tasks.filter(t => t.dueDate === dueDate && !t.done && t.id !== editTask?.id).length > 0 && (
+            <div className="task-modal-left-drawer">
+              <div className="sdt-header" style={{ marginBottom: 16 }}>Задачи на {dueDate.split('-').reverse().join('.')}:</div>
+              <div className="sdt-list">
+                {tasks.filter(t => t.dueDate === dueDate && !t.done && t.id !== editTask?.id).map(t => (
+                  <div key={t.id} className="sdt-item" style={{ background: 'rgba(255,255,255,0.05)', border: 'none', padding: '10px 14px' }}>
+                    <div className="sdt-dot" />
+                    <span className="sdt-title" title={t.title}>{t.title}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="task-modal-box" style={{ width: '100%', maxWidth: '100%' }}>
 
           {/* ── Header ── */}
           <div className="task-modal-header">
@@ -315,20 +332,6 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                 <div className="task-modal-time-label">Время</div>
                 <TimePicker value={dueTime} onChange={t => { setDueTime(t); setIsAllDay(false); }} />
               </div>
-
-              {tasks.filter(t => t.dueDate === dueDate && !t.done && t.id !== editTask?.id).length > 0 && (
-                <div className="selected-date-tasks">
-                  <div className="sdt-header">Задачи на этот день:</div>
-                  <div className="sdt-list">
-                    {tasks.filter(t => t.dueDate === dueDate && !t.done && t.id !== editTask?.id).map(t => (
-                      <div key={t.id} className="sdt-item">
-                        <div className="sdt-dot" />
-                        <span className="sdt-title">{t.title}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Right: Task details */}
@@ -452,6 +455,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </>
   );

@@ -919,3 +919,38 @@ input:checked + .slider:before { transform: translateX(22px); }
 .mc-day.today:has(.mc-dot)::after {
   display: none;
 }
+.task-modal-left-drawer {
+  position: absolute;
+  right: calc(100% - 24px); /* Overlap the border radius of the main modal slightly */
+  top: 40px;
+  bottom: 40px;
+  width: 240px;
+  background: var(--surface-light);
+  border: 1px solid var(--border-color);
+  border-radius: 24px 0 0 24px;
+  padding: 24px 20px;
+  box-shadow: -10px 10px 40px rgba(0,0,0,0.5);
+  animation: slideDrawer 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  overflow-y: auto;
+  scrollbar-width: none;
+  z-index: -1; /* So it sits behind the main modal's border */
+}
+.task-modal-left-drawer::-webkit-scrollbar { display: none; }
+
+@keyframes slideDrawer {
+  from { transform: translateX(40px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@media (max-width: 900px) {
+  .task-modal-left-drawer {
+    position: static;
+    width: 100%;
+    border-radius: 24px 24px 0 0;
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: none;
+    animation: none;
+    z-index: 1;
+    margin-bottom: -24px; /* Counteract padding */
+  }
+}
