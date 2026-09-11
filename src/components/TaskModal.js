@@ -209,7 +209,8 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
       setPriority(1);
       setIsAllDay(true);
       setDueDate(editTask?.dueDate || td);
-      setDueTime('09:00');
+      const now = new Date();
+      setDueTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
       setReminder('-1');
       setCyclic('none');
       setRepeat('none');
@@ -296,12 +297,10 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                 </label>
               </div>
 
-              {!isAllDay && (
-                <div className="task-modal-time-section">
-                  <div className="task-modal-time-label">Время</div>
-                  <TimePicker value={dueTime} onChange={setDueTime} />
-                </div>
-              )}
+              <div className="task-modal-time-section">
+                <div className="task-modal-time-label">Время</div>
+                <TimePicker value={dueTime} onChange={t => { setDueTime(t); setIsAllDay(false); }} />
+              </div>
             </div>
 
             {/* Right: Task details */}
@@ -341,81 +340,91 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
 
               {/* Properties */}
               <div className="properties-list mt-4">
-                <div className="property-row" onClick={() => setShowRemSheet(true)}>
-                  <div className="property-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                      <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-                    </svg>
+                
+                <div className="property-group">
+                  <div className={`property-row ${showRemSheet ? 'active' : ''}`} onClick={() => { setShowRemSheet(!showRemSheet); setShowCyclicSheet(false); setShowRepeatSheet(false); }}>
+                    <div className="property-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                      </svg>
+                    </div>
+                    <div className="property-content">
+                      <div className="property-title">{getReminderText(reminder)}</div>
+                      <div className="property-subtitle">Напоминание</div>
+                    </div>
                   </div>
-                  <div className="property-content">
-                    <div className="property-title">{getReminderText(reminder)}</div>
-                    <div className="property-subtitle">Напоминание</div>
-                  </div>
+                  {showRemSheet && (
+                    <div className="inline-options-panel">
+                      <RadioList name="rem" value={reminder} onChange={v => { setReminder(v); setShowRemSheet(false); }} options={[
+                        { value: '-1',  label: 'Без напоминания' },
+                        { value: '0',   label: 'Вовремя' },
+                        { value: '15',  label: 'За 15 минут' },
+                        { value: '30',  label: 'За 30 минут' },
+                        { value: '60',  label: 'За 1 час' },
+                        { value: '120', label: 'За 2 часа' },
+                        { value: '1440',label: 'За 1 день' },
+                      ]} />
+                    </div>
+                  )}
                 </div>
 
-                <div className="property-row" onClick={() => setShowCyclicSheet(true)}>
-                  <div className="property-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M2 12A10 10 0 0 0 22 12"/><path d="M12 2A10 10 0 0 0 2 12"/>
-                      <polyline points="1 7 5 12 1 12"/>
-                    </svg>
+                <div className="property-group">
+                  <div className={`property-row ${showCyclicSheet ? 'active' : ''}`} onClick={() => { setShowCyclicSheet(!showCyclicSheet); setShowRemSheet(false); setShowRepeatSheet(false); }}>
+                    <div className="property-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 12A10 10 0 0 0 22 12"/><path d="M12 2A10 10 0 0 0 2 12"/>
+                        <polyline points="1 7 5 12 1 12"/>
+                      </svg>
+                    </div>
+                    <div className="property-content">
+                      <div className="property-title">{getCyclicText(cyclic)}</div>
+                      <div className="property-subtitle">Цикличность</div>
+                    </div>
                   </div>
-                  <div className="property-content">
-                    <div className="property-title">{getCyclicText(cyclic)}</div>
-                    <div className="property-subtitle">Цикличность</div>
-                  </div>
+                  {showCyclicSheet && (
+                    <div className="inline-options-panel">
+                      <RadioList name="cyc" value={cyclic} onChange={v => { setCyclic(v); setShowCyclicSheet(false); }} options={[
+                        { value: 'none', label: 'Без цикла' },
+                        { value: '60',   label: 'Каждый час' },
+                        { value: '120',  label: 'Каждые 2 часа' },
+                        { value: '240',  label: 'Каждые 4 часа' },
+                      ]} />
+                    </div>
+                  )}
                 </div>
 
-                <div className="property-row" onClick={() => setShowRepeatSheet(true)}>
-                  <div className="property-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/>
-                      <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M22 14l-4.64 4.36A9 9 0 0 1 3.51 15"/>
-                    </svg>
+                <div className="property-group">
+                  <div className={`property-row ${showRepeatSheet ? 'active' : ''}`} onClick={() => { setShowRepeatSheet(!showRepeatSheet); setShowRemSheet(false); setShowCyclicSheet(false); }}>
+                    <div className="property-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/>
+                        <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M22 14l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+                      </svg>
+                    </div>
+                    <div className="property-content">
+                      <div className="property-title">{getRepeatText(repeat)}</div>
+                      <div className="property-subtitle">Повтор</div>
+                    </div>
                   </div>
-                  <div className="property-content">
-                    <div className="property-title">{getRepeatText(repeat)}</div>
-                    <div className="property-subtitle">Повтор</div>
-                  </div>
+                  {showRepeatSheet && (
+                    <div className="inline-options-panel">
+                      <RadioList name="rep" value={repeat} onChange={v => { setRepeat(v); setShowRepeatSheet(false); }} options={[
+                        { value: 'none',    label: 'Не повторяется' },
+                        { value: 'daily',   label: 'Каждый день' },
+                        { value: 'weekly',  label: 'Каждую неделю' },
+                        { value: 'monthly', label: 'Каждый месяц' },
+                        { value: 'yearly',  label: 'Каждый год' },
+                      ]} />
+                    </div>
+                  )}
                 </div>
+
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Bottom sheets */}
-      <BottomSheet isOpen={showRemSheet} onClose={() => setShowRemSheet(false)} title="Напоминание">
-        <RadioList name="rem" value={reminder} onChange={setReminder} options={[
-          { value: '-1',  label: 'Без напоминания' },
-          { value: '0',   label: 'Вовремя' },
-          { value: '15',  label: 'За 15 минут' },
-          { value: '30',  label: 'За 30 минут' },
-          { value: '60',  label: 'За 1 час' },
-          { value: '120', label: 'За 2 часа' },
-          { value: '1440',label: 'За 1 день' },
-        ]} />
-      </BottomSheet>
-
-      <BottomSheet isOpen={showCyclicSheet} onClose={() => setShowCyclicSheet(false)} title="Цикличность">
-        <RadioList name="cyc" value={cyclic} onChange={setCyclic} options={[
-          { value: 'none', label: 'Без цикла' },
-          { value: '60',   label: 'Каждый час' },
-          { value: '120',  label: 'Каждые 2 часа' },
-          { value: '240',  label: 'Каждые 4 часа' },
-        ]} />
-      </BottomSheet>
-
-      <BottomSheet isOpen={showRepeatSheet} onClose={() => setShowRepeatSheet(false)} title="Повтор">
-        <RadioList name="rep" value={repeat} onChange={setRepeat} options={[
-          { value: 'none',    label: 'Не повторяется' },
-          { value: 'daily',   label: 'Каждый день' },
-          { value: 'weekly',  label: 'Каждую неделю' },
-          { value: 'monthly', label: 'Каждый месяц' },
-          { value: 'yearly',  label: 'Каждый год' },
-        ]} />
-      </BottomSheet>
     </>
   );
 }

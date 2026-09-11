@@ -291,7 +291,7 @@ main {
   background: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: 24px;
-  width: 100%; max-width: 1000px;
+  width: 100%; max-width: 1150px;
   max-height: 90vh;
   display: flex; flex-direction: column;
   box-shadow: 0 32px 100px rgba(0,0,0,0.6);
@@ -323,7 +323,7 @@ main {
 
 /* Left col: calendar + time */
 .task-modal-left {
-  width: 340px; flex-shrink: 0;
+  width: 380px; flex-shrink: 0;
   border-right: 1px solid var(--border-color);
   padding: 20px 16px;
   overflow-y: auto;
@@ -842,9 +842,32 @@ input:checked + .slider:before { transform: translateX(22px); }
   .task-modal-right { padding: 16px; }
 }
 
+@media (max-width: 900px) {
+  .task-modal-body { flex-direction: column; overflow-y: auto; }
+  .task-modal-left { width: 100%; border-right: none; border-bottom: 1px solid var(--border-color); padding: 16px; }
+  .task-modal-right { padding: 16px; }
+  .task-edit-inputs { font-size: 16px; }
+  .input-title.large { font-size: 26px; }
+  .properties-list { gap: 12px; }
+}
+
 @media (min-width: 1400px) {
   :root { --content-max-width: 1100px; }
   .cal-panel { width: 400px; }
-  .task-modal-box { max-width: 1100px; }
-  .task-modal-left { width: 380px; }
+  .task-modal-box { max-width: 1200px; }
+  .task-modal-left { width: 420px; }
+}
+.inline-options-panel {
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 0 0 16px 16px;
+  margin-top: -8px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border-color);
+  border-top: none;
+  animation: slideDown 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
