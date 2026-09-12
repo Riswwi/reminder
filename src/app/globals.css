@@ -291,7 +291,7 @@ main {
   background: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: 24px;
-  width: 100%; max-width: 1150px;
+  width: 100%; max-width: 1250px;
   max-height: 96vh;
   display: flex; flex-direction: column;
   box-shadow: 0 32px 100px rgba(0,0,0,0.6);
@@ -921,25 +921,34 @@ input:checked + .slider:before { transform: translateX(22px); }
 }
 
 .task-modal-sdt-col {
-  width: 200px;
+  width: 240px;
   flex-shrink: 0;
-  border-right: 1px solid var(--border-color);
+  margin: 16px 0 16px 16px;
+  background: var(--surface-light);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
   padding: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  animation: popWindow 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   overflow-y: auto;
   scrollbar-width: none;
-  background: rgba(255,255,255,0.01);
-  animation: sdtColIn 0.2s cubic-bezier(0.175,0.885,0.32,1);
+  position: relative;
+  z-index: 10;
 }
 .task-modal-sdt-col::-webkit-scrollbar { display: none; }
-@keyframes sdtColIn {
-  from { opacity: 0; transform: translateX(-10px); }
-  to { opacity: 1; transform: translateX(0); }
+
+@keyframes popWindow {
+  from { opacity: 0; transform: scale(0.9) translateX(-10px); }
+  to { opacity: 1; transform: scale(1) translateX(0); }
 }
 
 @media (max-width: 900px) {
   .task-modal-sdt-col {
     width: 100%;
-    border-right: none;
+    margin: 0;
+    border-radius: 0;
     border-bottom: 1px solid var(--border-color);
+    box-shadow: none;
+    animation: none;
   }
 }

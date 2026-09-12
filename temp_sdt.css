@@ -1,0 +1,32 @@
+.task-modal-sdt-col {
+  width: 240px;
+  flex-shrink: 0;
+  margin: 16px 0 16px 16px;
+  background: var(--surface-light);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  animation: popWindow 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  overflow-y: auto;
+  scrollbar-width: none;
+  position: relative;
+  z-index: 10;
+}
+.task-modal-sdt-col::-webkit-scrollbar { display: none; }
+
+@keyframes popWindow {
+  from { opacity: 0; transform: scale(0.9) translateX(-10px); }
+  to { opacity: 1; transform: scale(1) translateX(0); }
+}
+
+@media (max-width: 900px) {
+  .task-modal-sdt-col {
+    width: 100%;
+    margin: 0;
+    border-radius: 0;
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: none;
+    animation: none;
+  }
+}
