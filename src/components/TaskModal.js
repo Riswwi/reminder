@@ -242,8 +242,8 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 700 * 1024) {
-      alert('Файл слишком большой. Максимальный размер 700 KB.');
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Файл слишком большой. Максимальный размер 10 MB.');
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
