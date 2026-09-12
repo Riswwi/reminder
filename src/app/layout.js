@@ -27,7 +27,7 @@ export default function RootLayout({ children }) {
       <body>
         <div
           className="app-container"
-          style={{ '--content-max-width': '1200px', '--calendar-max-width': '500px' }}
+          style={{ '--content-max-width': '100%', '--calendar-max-width': '500px' }}
         >
           <header>
             <div style={{ maxWidth: 'var(--content-max-width)', margin: '0 auto', width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
