@@ -67,11 +67,23 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
   return (
     <>
       <div className={`task-row ${task.done ? 'done' : ''}`} onClick={() => onEdit(task)}>
-        {/* Priority Dot instead of Checkbox */}
+        {/* Checkbox — click to toggle done */}
         <div
-          className="task-row-check"
-          style={{ background: p.accent, borderColor: p.accent, width: '16px', height: '16px', borderRadius: '50%', margin: '0 4px', flexShrink: 0 }}
-        ></div>
+          className={`task-row-check ${task.done ? 'checked' : ''}`}
+          style={{
+            background: task.done ? p.accent : 'transparent',
+            borderColor: p.accent,
+            flexShrink: 0,
+            cursor: 'pointer'
+          }}
+          onClick={e => { e.stopPropagation(); onToggle(task.id, task.done); }}
+        >
+          {task.done && (
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          )}
+        </div>
 
         {/* Content */}
         <div className="task-row-content">

@@ -239,22 +239,26 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
     setTimeout(() => { titleRef.current?.focus(); titleRef.current?.select(); }, 60);
   }, [isOpen, editTask?.id]);
 
-  const handleFileUpload = async (e) => {
+  const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    setIsUploading(true);
-    try {
-      const fr = storageRef(storage, `tasks/${Date.now()}_${file.name}`);
-      await uploadBytes(fr, file);
-      const url = await getDownloadURL(fr);
-      setFileData({ url, name: file.name, type: file.type });
-    } catch (err) {
-      console.error(err);
-      alert("Ошибка при загрузке файла. Убедитесь, что Firebase Storage включен и настроены правила.\n" + err.message);
-    } finally {
-      setIsUploading(false);
+    if (file.size > 700 * 1024) {
+      alert('Файл слишком большой. Максимальный размер 700 KB.');
       if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
     }
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setFileData({ url: event.target.result, name: file.name, type: file.type });
+      setIsUploading(false);
+    };
+    reader.onerror = () => {
+      alert('Ошибка при чтении файла.');
+      setIsUploading(false);
+    };
+    reader.readAsDataURL(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleSave = async () => {
