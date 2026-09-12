@@ -37,7 +37,7 @@ const fmtDateShort = (ds) => {
 };
 
 // ─── Delete Dialog ────────────────────────────────────────────────────────────
-function DeleteDialog({ isOpen, onConfirm, onCancel }) {
+function DeleteDialog({ isOpen, onConfirm, onCancel, taskTitle }) {
   if (!isOpen) return null;
   return (
     <div className="delete-dialog-overlay" onClick={onCancel}>
@@ -49,7 +49,7 @@ function DeleteDialog({ isOpen, onConfirm, onCancel }) {
           </svg>
         </div>
         <h3>Удалить задачу?</h3>
-        <p>Это действие нельзя отменить</p>
+        <p>Вы точно хотите удалить задачу <b>{taskTitle}</b>?</p>
         <div className="delete-dialog-actions">
           <button className="delete-dialog-btn cancel" onClick={onCancel}>Отмена</button>
           <button className="delete-dialog-btn confirm" onClick={onConfirm}>Удалить</button>
@@ -67,16 +67,11 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
   return (
     <>
       <div className={`task-row ${task.done ? 'done' : ''}`} onClick={() => onEdit(task)}>
-        {/* Checkbox */}
+        {/* Priority Dot instead of Checkbox */}
         <div
-          className={`task-row-check ${task.done ? 'checked' : ''}`}
-          style={task.done ? { background: p.accent, borderColor: p.accent } : { borderColor: p.border }}
-          onClick={e => { e.stopPropagation(); onToggle(task.id, task.done); }}
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        </div>
+          className="task-row-check"
+          style={{ background: p.accent, borderColor: p.accent, width: '16px', height: '16px', borderRadius: '50%', margin: '0 4px', flexShrink: 0 }}
+        ></div>
 
         {/* Content */}
         <div className="task-row-content">
@@ -96,6 +91,13 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
           )}
           {task.priority === 3 && <span className="task-row-badge urgent">Срочно</span>}
           {task.priority === 2 && <span className="task-row-badge soon">Скоро</span>}
+          {task.fileData && (
+            <span className="task-row-badge" style={{ color: 'var(--text-muted)' }}>
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4, verticalAlign: 'middle' }}>
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+              </svg>
+            </span>
+          )}
         </div>
 
         {/* Delete */}
@@ -113,6 +115,7 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
         isOpen={confirmDelete}
         onCancel={() => setConfirmDelete(false)}
         onConfirm={() => { setConfirmDelete(false); onDelete(task.id); }}
+        taskTitle={task.title}
       />
     </>
   );

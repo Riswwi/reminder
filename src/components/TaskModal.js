@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { doc, setDoc, updateDoc, collection, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь',
@@ -174,6 +175,9 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
   const [reminder, setReminder] = useState('-1');
   const [cyclic, setCyclic]     = useState('none');
   const [repeat, setRepeat]     = useState('none');
+  const [fileData, setFileData] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef(null);
   const [isSaving, setIsSaving] = useState(false);
   const [tasks, setTasks]       = useState([]);
 
@@ -214,9 +218,10 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
       setIsAllDay(editTask.isAllDay !== false);
       setDueDate(editTask.dueDate || td);
       setDueTime(editTask.dueTime || '09:00');
-      setReminder(String(editTask.reminderOffset ?? '-1'));
+      setReminder(editTask.reminderOffset !== null ? String(editTask.reminderOffset) : '-1');
       setCyclic(editTask.cyclicType || 'none');
       setRepeat(editTask.repeatType || 'none');
+      setFileData(editTask.fileData || null);
     } else {
       setTitle('');
       setDesc('');
@@ -228,10 +233,29 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
       setReminder('-1');
       setCyclic('none');
       setRepeat('none');
+      setFileData(null);
     }
     setIsSaving(false);
     setTimeout(() => { titleRef.current?.focus(); titleRef.current?.select(); }, 60);
   }, [isOpen, editTask?.id]);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setIsUploading(true);
+    try {
+      const fr = storageRef(storage, `tasks/${Date.now()}_${file.name}`);
+      await uploadBytes(fr, file);
+      const url = await getDownloadURL(fr);
+      setFileData({ url, name: file.name, type: file.type });
+    } catch (err) {
+      console.error(err);
+      alert("Ошибка при загрузке файла. Убедитесь, что Firebase Storage включен и настроены правила.\n" + err.message);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const handleSave = async () => {
     if (!title.trim() || isSaving) return;
@@ -242,12 +266,13 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
         dueDate: dueDate || todayStr(),
         dueTime: isAllDay ? '09:00' : (dueTime || '09:00'),
         isAllDay,
-        reminderOffset: reminder,
+        reminderOffset: reminder !== '-1' ? parseInt(reminder) : null,
         customReminderMins: null,
-        cyclicType: cyclic,
+        cyclicType: cyclic !== 'none' ? cyclic : null,
         customCyclicMins: null,
-        repeatType: repeat,
-        repeatWeekdays: [], customRepeat: null, fileData: null,
+        repeatType: repeat !== 'none' ? repeat : null,
+        repeatWeekdays: [], customRepeat: null,
+        fileData: fileData || null,
         done: editTask?.done || false,
       };
       if (editTask?.id && editTask?.title) {
@@ -346,13 +371,18 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
               {/* Title + Priority */}
               <div className="task-edit-top">
                 <div className="task-edit-inputs">
-                  <input
+                  <textarea
                     ref={titleRef}
-                    type="text"
                     className="input-title large"
                     placeholder="Новая задача"
                     value={title}
-                    onChange={e => setTitle(e.target.value)}
+                    rows={1}
+                    style={{ resize: 'none', overflow: 'hidden' }}
+                    onChange={e => {
+                      setTitle(e.target.value);
+                      e.target.style.height = 'auto';
+                      e.target.style.height = e.target.scrollHeight + 'px';
+                    }}
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSave(); } }}
                     autoComplete="off"
                   />
@@ -456,6 +486,43 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                       ]} />
                     </div>
                   )}
+                </div>
+
+                {/* File Attachment */}
+                <div className="property-group">
+                  <div className="property-row" onClick={() => fileInputRef.current?.click()}>
+                    <div className="property-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                      </svg>
+                    </div>
+                    <div className="property-content">
+                      <div className="property-title">
+                        {isUploading ? 'Загрузка...' : (
+                          fileData ? (
+                            <a href={fileData.url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }} onClick={e => e.stopPropagation()}>
+                              {fileData.name}
+                            </a>
+                          ) : 'Прикрепить файл'
+                        )}
+                      </div>
+                      <div className="property-subtitle">Фото или документ</div>
+                    </div>
+                    {fileData && !isUploading && (
+                      <div className="property-action" onClick={(e) => { e.stopPropagation(); setFileData(null); }}>
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--text-muted)" strokeWidth="2">
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    style={{ display: 'none' }}
+                    onChange={handleFileUpload}
+                  />
                 </div>
 
               </div>

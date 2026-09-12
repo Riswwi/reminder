@@ -192,12 +192,8 @@ export default function CalendarPage() {
                   >
                     <div
                       className="cal-task-check"
-                      onClick={e => { e.stopPropagation(); toggleTask(task.id, task.done); }}
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12"/>
-                      </svg>
-                    </div>
+                      style={{ background: p.accent, borderColor: p.accent, width: '16px', height: '16px', borderRadius: '50%', margin: '0 4px', flexShrink: 0 }}
+                    ></div>
                     <div className="cal-task-body">
                       <div className="cal-task-title">{task.title}</div>
                       {task.desc && <div className="cal-task-desc">{task.desc}</div>}
@@ -208,6 +204,13 @@ export default function CalendarPage() {
                         }
                         {task.priority === 3 && <span style={{ color:'#FF453A', marginLeft: 8 }}>● Срочно</span>}
                         {task.priority === 2 && <span style={{ color:'#FFD60A', marginLeft: 8 }}>● Скоро</span>}
+                        {task.fileData && (
+                          <span style={{ color: 'var(--text-muted)', marginLeft: 8 }}>
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4, verticalAlign: 'middle' }}>
+                              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                            </svg>
+                          </span>
+                        )}
                       </div>
                     </div>
                     <button

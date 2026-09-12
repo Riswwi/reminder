@@ -1,5 +1,6 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCLa95CXa2JoaXZRQ8CN1sYKmQcJBNHcj4",
@@ -11,8 +12,8 @@ const firebaseConfig = {
   measurementId: "G-KFRB37RN4W"
 };
 
-// Initialize Firebase only if it hasn't been initialized already
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 const db = getFirestore(app);
+const storage = getStorage(app);
 
-export { db };
+export { db, storage };

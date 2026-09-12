@@ -12,15 +12,8 @@ export default function RootLayout({ children }) {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [contentWidth, setContentWidth] = useState(900);
-  const [calendarWidth, setCalendarWidth] = useState(400);
 
   useEffect(() => {
-    const saved = localStorage.getItem('custom_content_width');
-    if (saved) setContentWidth(Number(saved));
-    const savedCal = localStorage.getItem('custom_calendar_width');
-    if (savedCal) setCalendarWidth(Number(savedCal));
-
     const handleOpenModal = (e) => {
       setTaskToEdit(e.detail || null);
       setIsTaskModalOpen(true);
@@ -29,22 +22,12 @@ export default function RootLayout({ children }) {
     return () => window.removeEventListener('openTaskModal', handleOpenModal);
   }, []);
 
-  const handleWidthChange = (val) => {
-    setContentWidth(val);
-    localStorage.setItem('custom_content_width', val);
-  };
-
-  const handleCalendarWidthChange = (val) => {
-    setCalendarWidth(val);
-    localStorage.setItem('custom_calendar_width', val);
-  };
-
   return (
     <html lang="ru">
       <body>
         <div
           className="app-container"
-          style={{ '--content-max-width': `${contentWidth}px`, '--calendar-max-width': `${calendarWidth}px` }}
+          style={{ '--content-max-width': '1200px', '--calendar-max-width': '500px' }}
         >
           <header>
             <div style={{ maxWidth: 'var(--content-max-width)', margin: '0 auto', width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -91,10 +74,6 @@ export default function RootLayout({ children }) {
           <SettingsModal
             isOpen={isSettingsModalOpen}
             onClose={() => setIsSettingsModalOpen(false)}
-            contentWidth={contentWidth}
-            setContentWidth={handleWidthChange}
-            calendarWidth={calendarWidth}
-            setCalendarWidth={handleCalendarWidthChange}
           />
         </div>
       </body>
