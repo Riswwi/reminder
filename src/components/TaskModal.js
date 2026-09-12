@@ -300,19 +300,28 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
           <div className="task-modal-body">
 
             {/* Leftmost: Tasks for selected date */}
-            {tasks.filter(t => t.dueDate === dueDate && !t.done && t.id !== editTask?.id).length > 0 && (
-              <div className="task-modal-sdt-col">
-                <div className="sdt-header">Задачи на {dueDate.split('-').reverse().join('.')}:</div>
+            <div className="task-modal-sdt-col">
+              <div className="sdt-header">Задачи на {dueDate.split('-').reverse().join('.')}:</div>
+              {tasks.filter(t => t.dueDate === dueDate && !t.done && t.id !== editTask?.id).length > 0 ? (
                 <div className="sdt-list">
                   {tasks.filter(t => t.dueDate === dueDate && !t.done && t.id !== editTask?.id).map(t => (
                     <div key={t.id} className="sdt-item">
                       <div className="sdt-dot" />
-                      <span className="sdt-title" title={t.title}>{t.title}</span>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span className="sdt-title">{t.title}</span>
+                        {!t.isAllDay && t.dueTime && (
+                          <span className="sdt-time">{t.dueTime}</span>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                <div style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 12 }}>
+                  Задач на этот день нет
+                </div>
+              )}
+            </div>
 
             {/* Left: Calendar + Time */}
             <div className="task-modal-left">
