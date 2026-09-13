@@ -61,6 +61,13 @@ export default function CalendarPage() {
   const today = new Date(); today.setHours(0,0,0,0);
   const selStr = toDateStr(selectedDate);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.__calendarSelectedDate = selStr;
+      return () => { window.__calendarSelectedDate = null; };
+    }
+  }, [selStr]);
+
   // Build calendar days
   const cells = [];
   for (let i = 0; i < firstDayIdx; i++) cells.push(null);
