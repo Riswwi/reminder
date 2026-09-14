@@ -203,7 +203,6 @@ export default function CalendarPage() {
                     ></div>
                     <div className="cal-task-body">
                       <div className="cal-task-title">{task.title}</div>
-                      {task.desc && <div className="cal-task-desc">{task.desc}</div>}
                       <div className="cal-task-time">
                         {task.isAllDay
                           ? <span>📅 Весь день</span>
@@ -220,6 +219,16 @@ export default function CalendarPage() {
                         )}
                       </div>
                     </div>
+                    <button
+                      className="delete-btn"
+                      style={{ marginRight: 4 }}
+                      onClick={e => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('openTaskModal', { detail: task })); }}
+                    >
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    </button>
                     <button
                       className="delete-btn"
                       onClick={e => { e.stopPropagation(); deleteTask(task.id); }}

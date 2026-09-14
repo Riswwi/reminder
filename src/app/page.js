@@ -79,7 +79,6 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
         {/* Content */}
         <div className="task-row-content">
           <div className="task-row-title">{task.title}</div>
-          {task.desc && <div className="task-row-desc">{task.desc}</div>}
         </div>
 
         {/* Meta */}
@@ -102,6 +101,18 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
             </span>
           )}
         </div>
+
+        {/* View */}
+        <button
+          className="task-row-del"
+          style={{ marginRight: 4 }}
+          onClick={e => { e.stopPropagation(); onEdit(task); }}
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </button>
 
         {/* Delete */}
         <button
@@ -128,7 +139,7 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
 export default function Dashboard() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [sortMethod, setSortMethod] = useState('time');
+  const [sortMethod, setSortMethod] = useState('priority');
   const [showCompleted, setShowCompleted] = useState(false);
 
   useEffect(() => {
@@ -168,29 +179,26 @@ export default function Dashboard() {
   const done   = tasks.filter(t => t.done);
 
   const sorted = [...active].sort((a, b) => {
+    const da = a.dueDate || '1970-01-01';
+    const db2 = b.dueDate || '1970-01-01';
+    if (da !== db2) return da.localeCompare(db2);
+
     if (sortMethod === 'priority') {
       const pd = (b.priority || 1) - (a.priority || 1);
       if (pd !== 0) return pd;
     }
-    const da = a.dueDate || '1970-01-01';
-    const db2 = b.dueDate || '1970-01-01';
-    if (da !== db2) return da.localeCompare(db2);
     return (a.dueTime || '').localeCompare(b.dueTime || '');
   });
 
-  // Group by date (only in time sort)
+  // Group by date always
   const groups = [];
-  if (sortMethod === 'time') {
-    const map = new Map();
-    sorted.forEach(t => {
-      const key = t.dueDate || 'none';
-      if (!map.has(key)) map.set(key, []);
-      map.get(key).push(t);
-    });
-    map.forEach((tasks, date) => groups.push({ date, tasks }));
-  } else {
-    groups.push({ date: null, tasks: sorted });
-  }
+  const map = new Map();
+  sorted.forEach(t => {
+    const key = t.dueDate || 'none';
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(t);
+  });
+  map.forEach((tasks, date) => groups.push({ date, tasks }));
 
   if (loading) {
     return (

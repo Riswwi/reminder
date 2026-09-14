@@ -364,6 +364,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                 <div className="task-edit-inputs">
                   <textarea
                     ref={titleRef}
+                    autoFocus
                     className="input-title large"
                     placeholder="Новая задача"
                     value={title}
