@@ -337,6 +337,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                     const allDay = e.target.checked;
                     setIsAllDay(allDay);
                     if (!allDay && reminder === '-1') setReminder('0');
+                    else if (allDay) setReminder('-1');
                   }} />
                   <span className="slider round" />
                 </label>
