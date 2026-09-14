@@ -82,7 +82,7 @@ function TimePicker({ value, onChange }) {
   };
 
   const hours = Array.from({ length: 24 }, (_, i) => i);
-  const mins  = Array.from({ length: 12 }, (_, i) => i * 5);
+  const mins  = Array.from({ length: 60 }, (_, i) => i);
 
   return (
     <div className="tp-wrap">
@@ -109,7 +109,7 @@ function TimePicker({ value, onChange }) {
             <button
               key={mm}
               type="button"
-              className={`tp-item${mm === Math.round(m / 5) * 5 ? ' active' : ''}`}
+              className={`tp-item${mm === m ? ' active' : ''}`}
               onClick={() => set(h, mm)}
             >
               {String(mm).padStart(2,'0')}
@@ -333,14 +333,22 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
               <div className="task-modal-allday">
                 <span>Весь день</span>
                 <label className="switch">
-                  <input type="checkbox" checked={isAllDay} onChange={e => setIsAllDay(e.target.checked)} />
+                  <input type="checkbox" checked={isAllDay} onChange={e => {
+                    const allDay = e.target.checked;
+                    setIsAllDay(allDay);
+                    if (!allDay && reminder === '-1') setReminder('0');
+                  }} />
                   <span className="slider round" />
                 </label>
               </div>
 
               <div className="task-modal-time-section">
                 <div className="task-modal-time-label">Время</div>
-                <TimePicker value={dueTime} onChange={t => { setDueTime(t); setIsAllDay(false); }} />
+                <TimePicker value={dueTime} onChange={t => { 
+                  setDueTime(t); 
+                  setIsAllDay(false); 
+                  if (reminder === '-1') setReminder('0');
+                }} />
               </div>
             </div>
 
