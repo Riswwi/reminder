@@ -47,6 +47,9 @@ export async function POST(req) {
         action: 'sync_tasks',
         timestamp: String(Date.now())
       },
+      android: {
+        priority: 'high'
+      },
       tokens: tokens
     };
 
