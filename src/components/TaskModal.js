@@ -260,6 +260,10 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
         taskData.id = newId;
         await setDoc(doc(db, 'tasks', String(newId)), taskData);
       }
+      
+      // Notify mobile app to sync
+      fetch('/api/ping-mobile', { method: 'POST' }).catch(err => console.error('Ping error:', err));
+      
       onClose();
     } catch (e) {
       console.error('Error saving task:', e);

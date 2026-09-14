@@ -35,6 +35,7 @@ export default function TasksPage() {
       await updateDoc(taskRef, {
         done: !currentStatus
       });
+      fetch('/api/ping-mobile', { method: 'POST' }).catch(err => console.error('Ping error:', err));
     } catch (error) {
       console.error("Error updating task: ", error);
     }
@@ -52,6 +53,7 @@ export default function TasksPage() {
         done: false,
         category: "Work"
       });
+      fetch('/api/ping-mobile', { method: 'POST' }).catch(err => console.error('Ping error:', err));
     } catch (e) {
       console.error("Error adding task: ", e);
     }
@@ -61,6 +63,7 @@ export default function TasksPage() {
     try {
       if (window.confirm("Are you sure you want to delete this task?")) {
         await deleteDoc(doc(db, "tasks", id));
+        fetch('/api/ping-mobile', { method: 'POST' }).catch(err => console.error('Ping error:', err));
       }
     } catch (error) {
       console.error("Error deleting task: ", error);
