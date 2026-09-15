@@ -988,9 +988,9 @@ input:checked + .slider:before { transform: translateX(22px); }
 .popup-overlay.hidden { display: none; opacity: 0; }
 .popup-content {
   background: var(--surface-color);
-  width: 90%; max-width: 450px;
+  width: 90%; max-width: 800px;
   border-radius: 20px;
-  padding: 24px;
+  padding: 28px;
   box-shadow: 0 10px 40px rgba(0,0,0,0.5);
   animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   display: flex; flex-direction: column;
