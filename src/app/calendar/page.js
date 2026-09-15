@@ -203,7 +203,17 @@ export default function CalendarPage() {
                     ></div>
                     <div className="cal-task-body">
                       <div className="cal-task-title">{task.title}</div>
-                      <div className="cal-task-time">
+                      <div className="cal-task-time" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {task.desc && task.desc.trim() !== '' && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', color: 'rgba(255,255,255,0.4)' }} title="Есть описание">
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <line x1="21" y1="10" x2="3" y2="10"></line>
+                              <line x1="21" y1="6" x2="3" y2="6"></line>
+                              <line x1="21" y1="14" x2="3" y2="14"></line>
+                              <line x1="14" y1="18" x2="3" y2="18"></line>
+                            </svg>
+                          </span>
+                        )}
                         {task.isAllDay
                           ? <span>📅 Весь день</span>
                           : <span>🕐 {task.dueTime || '09:00'}</span>

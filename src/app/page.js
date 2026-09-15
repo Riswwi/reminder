@@ -83,6 +83,16 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
 
         {/* Meta */}
         <div className="task-row-meta">
+          {task.desc && task.desc.trim() !== '' && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', marginRight: '6px', color: 'rgba(255,255,255,0.4)' }} title="Есть описание">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="21" y1="10" x2="3" y2="10"></line>
+                <line x1="21" y1="6" x2="3" y2="6"></line>
+                <line x1="21" y1="14" x2="3" y2="14"></line>
+                <line x1="14" y1="18" x2="3" y2="18"></line>
+              </svg>
+            </span>
+          )}
           {!task.isAllDay && (
             <span className="task-row-time">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
