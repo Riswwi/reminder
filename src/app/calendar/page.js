@@ -195,7 +195,7 @@ export default function CalendarPage() {
                     key={task.id}
                     className="cal-task-item"
                     style={{ backgroundColor: p.bg, borderColor: p.border }}
-                    onClick={() => openEdit(task)}
+                    onClick={() => window.dispatchEvent(new CustomEvent('openViewTaskModal', { detail: task }))}
                   >
                     <div
                       className="cal-task-check"
@@ -224,12 +224,12 @@ export default function CalendarPage() {
                       style={{ marginRight: 4 }}
                       onClick={e => { 
                         e.stopPropagation(); 
-                        window.dispatchEvent(new CustomEvent('openViewTaskModal', { detail: task })); 
+                        openEdit(task); 
                       }}
                     >
                       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 20h9"></path>
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
                       </svg>
                     </button>
                     <button
