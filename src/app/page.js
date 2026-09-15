@@ -106,7 +106,10 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
         <button
           className="task-row-del"
           style={{ marginRight: 4 }}
-          onClick={e => { e.stopPropagation(); onEdit(task); }}
+          onClick={e => { 
+            e.stopPropagation(); 
+            window.dispatchEvent(new CustomEvent('openViewTaskModal', { detail: task }));
+          }}
         >
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>

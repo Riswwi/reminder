@@ -5,12 +5,17 @@ import Link from 'next/link';
 import "./globals.css";
 import TaskModal from '@/components/TaskModal';
 import SettingsModal from '@/components/SettingsModal';
+import ViewTaskPopup from '@/components/ViewTaskPopup';
 import { useState, useEffect } from 'react';
 
 export default function RootLayout({ children }) {
   const pathname = usePathname();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState(null);
+  
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [taskToView, setTaskToView] = useState(null);
+  
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   useEffect(() => {
@@ -18,8 +23,16 @@ export default function RootLayout({ children }) {
       setTaskToEdit(e.detail || null);
       setIsTaskModalOpen(true);
     };
+    const handleOpenViewModal = (e) => {
+      setTaskToView(e.detail || null);
+      setIsViewModalOpen(true);
+    };
     window.addEventListener('openTaskModal', handleOpenModal);
-    return () => window.removeEventListener('openTaskModal', handleOpenModal);
+    window.addEventListener('openViewTaskModal', handleOpenViewModal);
+    return () => {
+      window.removeEventListener('openTaskModal', handleOpenModal);
+      window.removeEventListener('openViewTaskModal', handleOpenViewModal);
+    };
   }, []);
 
   return (
@@ -78,6 +91,12 @@ export default function RootLayout({ children }) {
               editTask={taskToEdit}
             />
           )}
+          
+          <ViewTaskPopup
+            isOpen={isViewModalOpen}
+            onClose={() => { setIsViewModalOpen(false); setTaskToView(null); }}
+            task={taskToView}
+          />
 
           <SettingsModal
             isOpen={isSettingsModalOpen}
