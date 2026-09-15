@@ -383,7 +383,12 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                     rows="3"
                     placeholder="Добавьте детали..."
                     value={desc}
-                    onChange={e => setDesc(e.target.value)}
+                    style={{ minHeight: '64px', overflow: 'hidden' }}
+                    onChange={e => {
+                      setDesc(e.target.value);
+                      e.target.style.height = 'auto';
+                      e.target.style.height = e.target.scrollHeight + 'px';
+                    }}
                   />
                 </div>
                 <div className="priority-selector-col">

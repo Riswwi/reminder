@@ -178,27 +178,55 @@ export default function Dashboard() {
   const active = tasks.filter(t => !t.done);
   const done   = tasks.filter(t => t.done);
 
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+
   const sorted = [...active].sort((a, b) => {
     const da = a.dueDate || '1970-01-01';
     const db2 = b.dueDate || '1970-01-01';
-    if (da !== db2) return da.localeCompare(db2);
-
+    
     if (sortMethod === 'priority') {
+      const aTodayOrPast = da <= todayStr;
+      const bTodayOrPast = db2 <= todayStr;
+      if (aTodayOrPast && !bTodayOrPast) return -1;
+      if (!aTodayOrPast && bTodayOrPast) return 1;
+      
       const pd = (b.priority || 1) - (a.priority || 1);
       if (pd !== 0) return pd;
+      
+      if (da !== db2) return da.localeCompare(db2);
+      
+      if (a.isAllDay && !b.isAllDay) return -1;
+      if (!a.isAllDay && b.isAllDay) return 1;
+      return (a.dueTime || '').localeCompare(b.dueTime || '');
+    } else {
+      if (da !== db2) return da.localeCompare(db2);
+      if (a.isAllDay && !b.isAllDay) return -1;
+      if (!a.isAllDay && b.isAllDay) return 1;
+      return (a.dueTime || '').localeCompare(b.dueTime || '');
     }
-    return (a.dueTime || '').localeCompare(b.dueTime || '');
   });
 
-  // Group by date always
   const groups = [];
-  const map = new Map();
-  sorted.forEach(t => {
-    const key = t.dueDate || 'none';
-    if (!map.has(key)) map.set(key, []);
-    map.get(key).push(t);
-  });
-  map.forEach((tasks, date) => groups.push({ date, tasks }));
+  if (sortMethod === 'priority') {
+    const todayTasks = [];
+    const futureTasks = [];
+    sorted.forEach(t => {
+      const d = t.dueDate || 'none';
+      if (d <= todayStr) todayTasks.push(t);
+      else futureTasks.push(t);
+    });
+    if (todayTasks.length > 0) groups.push({ label: 'Сегодня', tasks: todayTasks });
+    if (futureTasks.length > 0) groups.push({ label: 'Предстоящие', tasks: futureTasks });
+  } else {
+    const map = new Map();
+    sorted.forEach(t => {
+      const key = t.dueDate || 'none';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(t);
+    });
+    map.forEach((tasks, date) => groups.push({ date, label: fmtDate(date), tasks }));
+  }
 
   if (loading) {
     return (
@@ -258,9 +286,9 @@ export default function Dashboard() {
       <div className="tasks-body">
         {groups.map(g => (
           <div key={g.date || 'all'} className="task-group">
-            {g.date && (
+            {g.label && (
               <div className="task-group-label">
-                <span className="task-group-name">{fmtDate(g.date)}</span>
+                <span className="task-group-name">{g.label}</span>
                 <span className="task-group-line" />
                 <span className="task-group-cnt">{g.tasks.length}</span>
               </div>
