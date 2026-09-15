@@ -23,6 +23,7 @@ export default function CalendarPage() {
   });
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [tasks, setTasks] = useState([]);
+  const [sortMethod, setSortMethod] = useState('priority');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   useEffect(() => {
@@ -82,7 +83,15 @@ export default function CalendarPage() {
   }
 
   // Selected date tasks
-  const selectedTasks = tasks.filter(t => t.dueDate === selStr && !t.done);
+  const selectedTasks = tasks.filter(t => t.dueDate === selStr && !t.done).sort((a, b) => {
+    if (sortMethod === 'priority') {
+      const pd = (b.priority || 1) - (a.priority || 1);
+      if (pd !== 0) return pd;
+    }
+    if (a.isAllDay && !b.isAllDay) return -1;
+    if (!a.isAllDay && b.isAllDay) return 1;
+    return (a.dueTime || '').localeCompare(b.dueTime || '');
+  });
   const selectedDone = tasks.filter(t => t.dueDate === selStr && t.done);
 
   const openEdit = (task) => {
@@ -174,6 +183,14 @@ export default function CalendarPage() {
             </svg>
             Добавить
           </button>
+        </div>
+
+        <div className="sort-controls" style={{ padding: '0 20px', marginBottom: '12px' }}>
+          <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Сортировка:</span>
+          <div className="sort-toggle">
+            <button className={`sort-btn ${sortMethod === 'time' ? 'active' : ''}`} onClick={() => setSortMethod('time')}>По времени</button>
+            <button className={`sort-btn ${sortMethod === 'priority' ? 'active' : ''}`} onClick={() => setSortMethod('priority')}>По важности</button>
+          </div>
         </div>
 
         <div className="cal-tasks-scroll">
