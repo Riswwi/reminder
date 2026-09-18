@@ -89,39 +89,61 @@ function TimeNumberInput({ label, value, max, onCommit }) {
     onCommit(nextValue);
   };
 
+  const step = (direction) => {
+    const parsed = Number.parseInt(inputRef.current?.value || String(value), 10);
+    const current = Number.isFinite(parsed) ? Math.min(max, Math.max(0, parsed)) : 0;
+    const nextValue = (current + direction + max + 1) % (max + 1);
+    if (inputRef.current) inputRef.current.value = String(nextValue).padStart(2, '0');
+    onCommit(nextValue);
+  };
+
   return (
     <label className="tp-direct-field">
       <span>{label}</span>
-      <input
-        key={value}
-        ref={inputRef}
-        type="text"
-        inputMode="numeric"
-        pattern="[0-9]*"
-        maxLength={2}
-        defaultValue={String(value).padStart(2, '0')}
-        aria-label={label === 'Часы' ? 'Введите часы' : 'Введите минуты'}
-        onFocus={event => event.currentTarget.select()}
-        onInput={event => {
-          event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '').slice(0, 2);
-        }}
-        onBlur={commit}
-        onKeyDown={event => {
-          if (event.key === 'Enter') {
-            event.preventDefault();
-            commit();
-            event.currentTarget.blur();
-          }
-          if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-            event.preventDefault();
-            const direction = event.key === 'ArrowUp' ? 1 : -1;
-            const parsed = Number.parseInt(event.currentTarget.value || String(value), 10);
-            const nextValue = (Math.min(max, Math.max(0, parsed)) + direction + max + 1) % (max + 1);
-            event.currentTarget.value = String(nextValue).padStart(2, '0');
-            onCommit(nextValue);
-          }
-        }}
-      />
+      <div className="tp-stepper">
+        <button
+          type="button"
+          className="tp-step-btn"
+          aria-label={`Уменьшить ${label.toLowerCase()}`}
+          onClick={() => step(-1)}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+        </button>
+        <input
+          key={value}
+          ref={inputRef}
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          maxLength={2}
+          defaultValue={String(value).padStart(2, '0')}
+          aria-label={label === 'Часы' ? 'Введите часы' : 'Введите минуты'}
+          onFocus={event => event.currentTarget.select()}
+          onInput={event => {
+            event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '').slice(0, 2);
+          }}
+          onBlur={commit}
+          onKeyDown={event => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              commit();
+              event.currentTarget.blur();
+            }
+            if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+              event.preventDefault();
+              step(event.key === 'ArrowUp' ? 1 : -1);
+            }
+          }}
+        />
+        <button
+          type="button"
+          className="tp-step-btn"
+          aria-label={`Увеличить ${label.toLowerCase()}`}
+          onClick={() => step(1)}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6" /></svg>
+        </button>
+      </div>
     </label>
   );
 }
