@@ -138,10 +138,12 @@ function TimeWheel({ label, value, max, onChange }) {
     const wheel = wheelRef.current;
     const target = wheel?.querySelector(`[data-value="${nextValue}"]`);
     if (!wheel || !target) return;
-    wheel.scrollTo({
-      top: target.offsetTop - (wheel.clientHeight - target.clientHeight) / 2,
-      behavior,
-    });
+    const wheelRect = wheel.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const distanceToCenter =
+      targetRect.top + targetRect.height / 2 -
+      (wheelRect.top + wheelRect.height / 2);
+    wheel.scrollTo({ top: wheel.scrollTop + distanceToCenter, behavior });
   };
 
   useEffect(() => {
@@ -157,10 +159,12 @@ function TimeWheel({ label, value, max, onChange }) {
   const selectCentered = () => {
     const wheel = wheelRef.current;
     if (!wheel) return;
-    const center = wheel.scrollTop + wheel.clientHeight / 2;
+    const wheelRect = wheel.getBoundingClientRect();
+    const center = wheelRect.top + wheelRect.height / 2;
     const items = Array.from(wheel.querySelectorAll('[data-value]'));
     const selected = items.reduce((closest, item) => {
-      const distance = Math.abs(item.offsetTop + item.clientHeight / 2 - center);
+      const itemRect = item.getBoundingClientRect();
+      const distance = Math.abs(itemRect.top + itemRect.height / 2 - center);
       return !closest || distance < closest.distance ? { item, distance } : closest;
     }, null);
     if (!selected) return;
@@ -189,7 +193,7 @@ function TimeWheel({ label, value, max, onChange }) {
         aria-valuenow={value}
         onScroll={() => {
           clearTimeout(settleTimerRef.current);
-          settleTimerRef.current = setTimeout(selectCentered, 80);
+          settleTimerRef.current = setTimeout(selectCentered, 160);
         }}
         onKeyDown={event => {
           if (event.key === 'ArrowUp') { event.preventDefault(); changeBy(-1); }
