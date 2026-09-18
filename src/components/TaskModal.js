@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { doc, setDoc, updateDoc, collection, onSnapshot } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase';
+import { pingMobile } from '@/lib/pingMobile';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -74,6 +75,129 @@ function MiniCalendar({ value, onChange, tasks = [] }) {
 }
 
 // ─── Time Picker ──────────────────────────────────────────────────────────────
+const TIME_HOURS = Array.from({ length: 24 }, (_, i) => i);
+const TIME_MINUTES = Array.from({ length: 60 }, (_, i) => i);
+
+function TimeNumberInput({ label, value, max, onCommit }) {
+  const inputRef = useRef(null);
+
+  const commit = () => {
+    const parsed = Number.parseInt(inputRef.current?.value || '0', 10);
+    const nextValue = Number.isFinite(parsed) ? Math.min(max, Math.max(0, parsed)) : 0;
+    if (inputRef.current) inputRef.current.value = String(nextValue).padStart(2, '0');
+    onCommit(nextValue);
+  };
+
+  return (
+    <label className="tp-direct-field">
+      <span>{label}</span>
+      <input
+        key={value}
+        ref={inputRef}
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        maxLength={2}
+        defaultValue={String(value).padStart(2, '0')}
+        aria-label={label === 'Часы' ? 'Введите часы' : 'Введите минуты'}
+        onFocus={event => event.currentTarget.select()}
+        onInput={event => {
+          event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '').slice(0, 2);
+        }}
+        onBlur={commit}
+        onKeyDown={event => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            commit();
+            event.currentTarget.blur();
+          }
+          if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+            event.preventDefault();
+            const direction = event.key === 'ArrowUp' ? 1 : -1;
+            const parsed = Number.parseInt(event.currentTarget.value || String(value), 10);
+            const nextValue = (Math.min(max, Math.max(0, parsed)) + direction + max + 1) % (max + 1);
+            event.currentTarget.value = String(nextValue).padStart(2, '0');
+            onCommit(nextValue);
+          }
+        }}
+      />
+    </label>
+  );
+}
+
+function TimeWheel({ label, values, value, onChange }) {
+  const scrollRef = useRef(null);
+  const scrollTimerRef = useRef(null);
+
+  const centerValue = useCallback((behavior = 'smooth') => {
+    const container = scrollRef.current;
+    const target = container?.querySelector(`[data-time-value="${value}"]`);
+    if (!container || !target) return;
+    container.scrollTo({
+      top: target.offsetTop - (container.clientHeight - target.clientHeight) / 2,
+      behavior,
+    });
+  }, [value]);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => centerValue('auto'));
+    return () => cancelAnimationFrame(frame);
+  }, [centerValue]);
+
+  useEffect(() => () => clearTimeout(scrollTimerRef.current), []);
+
+  const selectCenteredValue = () => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const center = container.scrollTop + container.clientHeight / 2;
+    const items = Array.from(container.querySelectorAll('[data-time-value]'));
+    const closest = items.reduce((best, item) => {
+      const itemCenter = item.offsetTop + item.clientHeight / 2;
+      return !best || Math.abs(itemCenter - center) < best.distance
+        ? { item, distance: Math.abs(itemCenter - center) }
+        : best;
+    }, null);
+    if (!closest) return;
+    const nextValue = Number(closest.item.dataset.timeValue);
+    if (nextValue !== value) onChange(nextValue);
+    container.scrollTo({
+      top: closest.item.offsetTop - (container.clientHeight - closest.item.clientHeight) / 2,
+      behavior: 'smooth',
+    });
+  };
+
+  return (
+    <div className="tp-col">
+      <div className="tp-label">{label}</div>
+      <div className="tp-scroll-shell">
+        <div
+          ref={scrollRef}
+          className="tp-scroll"
+          onScroll={() => {
+            clearTimeout(scrollTimerRef.current);
+            scrollTimerRef.current = setTimeout(selectCenteredValue, 90);
+          }}
+        >
+          {values.map(itemValue => (
+            <button
+              key={itemValue}
+              type="button"
+              data-time-value={itemValue}
+              className={`tp-item${itemValue === value ? ' active' : ''}`}
+              onClick={() => onChange(itemValue)}
+              aria-label={`${label}: ${String(itemValue).padStart(2, '0')}`}
+              aria-pressed={itemValue === value}
+            >
+              {String(itemValue).padStart(2, '0')}
+            </button>
+          ))}
+        </div>
+        <div className="tp-selection-band" aria-hidden="true" />
+      </div>
+    </div>
+  );
+}
+
 function TimePicker({ value, onChange }) {
   const [h, m] = (value || '09:00').split(':').map(Number);
 
@@ -81,41 +205,17 @@ function TimePicker({ value, onChange }) {
     onChange(`${String(newH).padStart(2,'0')}:${String(newM).padStart(2,'0')}`);
   };
 
-  const hours = Array.from({ length: 24 }, (_, i) => i);
-  const mins  = Array.from({ length: 60 }, (_, i) => i);
-
   return (
-    <div className="tp-wrap">
-      <div className="tp-col">
-        <div className="tp-label">ЧАС</div>
-        <div className="tp-scroll">
-          {hours.map(hh => (
-            <button
-              key={hh}
-              type="button"
-              className={`tp-item${hh === h ? ' active' : ''}`}
-              onClick={() => set(hh, m)}
-            >
-              {String(hh).padStart(2,'0')}
-            </button>
-          ))}
-        </div>
+    <div className="tp-control">
+      <div className="tp-direct-entry" aria-label="Ввод времени с клавиатуры">
+        <TimeNumberInput label="Часы" value={h} max={23} onCommit={newH => set(newH, m)} />
+        <span className="tp-direct-sep">:</span>
+        <TimeNumberInput label="Минуты" value={m} max={59} onCommit={newM => set(h, newM)} />
       </div>
-      <div className="tp-sep">:</div>
-      <div className="tp-col">
-        <div className="tp-label">МИН</div>
-        <div className="tp-scroll">
-          {mins.map(mm => (
-            <button
-              key={mm}
-              type="button"
-              className={`tp-item${mm === m ? ' active' : ''}`}
-              onClick={() => set(h, mm)}
-            >
-              {String(mm).padStart(2,'0')}
-            </button>
-          ))}
-        </div>
+      <div className="tp-wrap">
+        <TimeWheel label="ЧАС" values={TIME_HOURS} value={h} onChange={newH => set(newH, m)} />
+        <div className="tp-sep">:</div>
+        <TimeWheel label="МИН" values={TIME_MINUTES} value={m} onChange={newM => set(h, newM)} />
       </div>
     </div>
   );
@@ -207,32 +307,38 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
 
   useEffect(() => {
     if (!isOpen) return;
-    const td = todayStr();
-    if (editTask && editTask.title) {
-      setTitle(editTask.title || '');
-      setDesc(editTask.desc || '');
-      setPriority(editTask.priority || 1);
-      setIsAllDay(editTask.isAllDay !== false);
-      setDueDate(editTask.dueDate || td);
-      setDueTime(editTask.dueTime || '09:00');
-      setReminder(editTask.reminderOffset !== null ? String(editTask.reminderOffset) : '-1');
-      setCyclic(editTask.cyclicType || 'none');
-      setRepeat(editTask.repeatType || 'none');
-    } else {
-      setTitle('');
-      setDesc('');
-      setPriority(1);
-      setIsAllDay(true);
-      setDueDate(editTask?.dueDate || td);
-      const now = new Date();
-      setDueTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
-      setReminder('-1');
-      setCyclic('none');
-      setRepeat('none');
-    }
-    setIsSaving(false);
-    setTimeout(() => { titleRef.current?.focus(); titleRef.current?.select(); }, 60);
-  }, [isOpen, editTask?.id]);
+    const initTimer = setTimeout(() => {
+      const td = todayStr();
+      if (editTask && editTask.title) {
+        setTitle(editTask.title || '');
+        setDesc(editTask.desc || '');
+        setPriority(editTask.priority || 1);
+        setIsAllDay(editTask.isAllDay !== false);
+        setDueDate(editTask.dueDate || td);
+        setDueTime(editTask.dueTime || '09:00');
+        setReminder(editTask.reminderOffset !== null ? String(editTask.reminderOffset) : '-1');
+        setCyclic(editTask.cyclicType || 'none');
+        setRepeat(editTask.repeatType || 'none');
+      } else {
+        setTitle('');
+        setDesc('');
+        setPriority(1);
+        setIsAllDay(true);
+        setDueDate(editTask?.dueDate || td);
+        const now = new Date();
+        setDueTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+        setReminder('-1');
+        setCyclic('none');
+        setRepeat('none');
+      }
+      setIsSaving(false);
+      requestAnimationFrame(() => {
+        titleRef.current?.focus();
+        titleRef.current?.select();
+      });
+    }, 0);
+    return () => clearTimeout(initTimer);
+  }, [isOpen, editTask]);
 
 
   const handleSave = async () => {
@@ -253,16 +359,19 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
         fileData: null,
         done: editTask?.done || false,
       };
+      let savedTaskId;
       if (editTask?.id && editTask?.title) {
-        await updateDoc(doc(db, 'tasks', String(editTask.id)), taskData);
+        savedTaskId = String(editTask.id);
+        await updateDoc(doc(db, 'tasks', savedTaskId), taskData);
       } else {
         const newId = Date.now();
+        savedTaskId = String(newId);
         taskData.id = newId;
-        await setDoc(doc(db, 'tasks', String(newId)), taskData);
+        await setDoc(doc(db, 'tasks', savedTaskId), taskData);
       }
       
       // Notify mobile app to sync
-      fetch('/api/ping-mobile', { method: 'POST' }).catch(err => console.error('Ping error:', err));
+      void pingMobile(savedTaskId, 'upsert');
       
       onClose();
     } catch (e) {

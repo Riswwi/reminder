@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { pingMobile } from '@/lib/pingMobile';
 
 export default function ViewTaskPopup({ isOpen, onClose, task }) {
   const [desc, setDesc] = useState('');
@@ -10,15 +11,17 @@ export default function ViewTaskPopup({ isOpen, onClose, task }) {
   const textareaRef = useRef(null);
 
   useEffect(() => {
-    if (isOpen && task) {
+    if (!isOpen || !task) return;
+    const syncTimer = setTimeout(() => {
       setDesc(task.desc || '');
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         if (textareaRef.current) {
           textareaRef.current.style.height = 'auto';
           textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
         }
-      }, 10);
-    }
+      });
+    }, 0);
+    return () => clearTimeout(syncTimer);
   }, [isOpen, task]);
 
   if (!isOpen || !task) return null;
@@ -30,7 +33,7 @@ export default function ViewTaskPopup({ isOpen, onClose, task }) {
         desc: desc.trim()
       });
       // Notify mobile app to sync
-      fetch('/api/ping-mobile', { method: 'POST' }).catch(() => {});
+      void pingMobile(task.id, 'upsert');
       onClose();
     } catch (e) {
       console.error('Error updating description:', e);

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { pingMobile } from '@/lib/pingMobile';
 
 const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь',
                      'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
@@ -98,11 +99,18 @@ export default function CalendarPage() {
     window.dispatchEvent(new CustomEvent('openTaskModal', { detail: task }));
   };
   const toggleTask = async (id, current) => {
-    try { await updateDoc(doc(db, 'tasks', id), { done: !current }); }
+    try {
+      await updateDoc(doc(db, 'tasks', id), { done: !current });
+      void pingMobile(id, 'upsert');
+    }
     catch (e) { console.error(e); }
   };
   const deleteTask = async (id) => {
-    try { await deleteDoc(doc(db, 'tasks', id)); setConfirmDeleteId(null); }
+    try {
+      await deleteDoc(doc(db, 'tasks', id));
+      void pingMobile(id, 'delete');
+      setConfirmDeleteId(null);
+    }
     catch (e) { console.error(e); }
   };
 

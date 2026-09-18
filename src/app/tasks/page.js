@@ -4,7 +4,8 @@ import GlassCard from '@/components/GlassCard';
 import styles from './page.module.css';
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, doc, updateDoc, addDoc, query, orderBy, setDoc, deleteDoc } from 'firebase/firestore';
+import { pingMobile } from '@/lib/pingMobile';
+import { collection, onSnapshot, doc, updateDoc, query, setDoc, deleteDoc } from 'firebase/firestore';
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState([]);
@@ -35,7 +36,7 @@ export default function TasksPage() {
       await updateDoc(taskRef, {
         done: !currentStatus
       });
-      fetch('/api/ping-mobile', { method: 'POST' }).catch(err => console.error('Ping error:', err));
+      void pingMobile(id, 'upsert');
     } catch (error) {
       console.error("Error updating task: ", error);
     }
@@ -53,7 +54,7 @@ export default function TasksPage() {
         done: false,
         category: "Work"
       });
-      fetch('/api/ping-mobile', { method: 'POST' }).catch(err => console.error('Ping error:', err));
+      void pingMobile(newId, 'upsert');
     } catch (e) {
       console.error("Error adding task: ", e);
     }
@@ -63,7 +64,7 @@ export default function TasksPage() {
     try {
       if (window.confirm("Are you sure you want to delete this task?")) {
         await deleteDoc(doc(db, "tasks", id));
-        fetch('/api/ping-mobile', { method: 'POST' }).catch(err => console.error('Ping error:', err));
+        void pingMobile(id, 'delete');
       }
     } catch (error) {
       console.error("Error deleting task: ", error);

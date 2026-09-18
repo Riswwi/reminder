@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { pingMobile } from '@/lib/pingMobile';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 const P_COLORS = {
@@ -181,10 +182,16 @@ export default function Dashboard() {
   }, []);
 
   const toggleTask = async (id, cur) => {
-    try { await updateDoc(doc(db, 'tasks', id), { done: !cur }); } catch(e) { console.error(e); }
+    try {
+      await updateDoc(doc(db, 'tasks', id), { done: !cur });
+      void pingMobile(id, 'upsert');
+    } catch(e) { console.error(e); }
   };
   const deleteTask = async (id) => {
-    try { await deleteDoc(doc(db, 'tasks', id)); } catch(e) { console.error(e); }
+    try {
+      await deleteDoc(doc(db, 'tasks', id));
+      void pingMobile(id, 'delete');
+    } catch(e) { console.error(e); }
   };
   const openEdit = (task) => window.dispatchEvent(new CustomEvent('openTaskModal', { detail: task }));
 
