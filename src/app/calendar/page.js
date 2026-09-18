@@ -89,8 +89,8 @@ export default function CalendarPage() {
       const pd = (b.priority || 1) - (a.priority || 1);
       if (pd !== 0) return pd;
     }
-    if (a.isAllDay && !b.isAllDay) return -1;
-    if (!a.isAllDay && b.isAllDay) return 1;
+    if (a.isAllDay && !b.isAllDay) return 1;
+    if (!a.isAllDay && b.isAllDay) return -1;
     return (a.dueTime || '').localeCompare(b.dueTime || '');
   });
   const selectedDone = tasks.filter(t => t.dueDate === selStr && t.done);

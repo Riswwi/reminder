@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { doc, setDoc, updateDoc, collection, onSnapshot } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase';
 import { pingMobile } from '@/lib/pingMobile';
@@ -15,6 +15,10 @@ function toDateStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 const todayStr = () => toDateStr(new Date());
+const currentTimeStr = () => {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+};
 
 // ─── Mini Calendar ────────────────────────────────────────────────────────────
 function MiniCalendar({ value, onChange, tasks = [] }) {
@@ -75,9 +79,6 @@ function MiniCalendar({ value, onChange, tasks = [] }) {
 }
 
 // ─── Time Picker ──────────────────────────────────────────────────────────────
-const TIME_HOURS = Array.from({ length: 24 }, (_, i) => i);
-const TIME_MINUTES = Array.from({ length: 60 }, (_, i) => i);
-
 function TimeNumberInput({ label, value, max, onCommit }) {
   const inputRef = useRef(null);
 
@@ -125,79 +126,6 @@ function TimeNumberInput({ label, value, max, onCommit }) {
   );
 }
 
-function TimeWheel({ label, values, value, onChange }) {
-  const scrollRef = useRef(null);
-  const scrollTimerRef = useRef(null);
-
-  const centerValue = useCallback((behavior = 'smooth') => {
-    const container = scrollRef.current;
-    const target = container?.querySelector(`[data-time-value="${value}"]`);
-    if (!container || !target) return;
-    container.scrollTo({
-      top: target.offsetTop - (container.clientHeight - target.clientHeight) / 2,
-      behavior,
-    });
-  }, [value]);
-
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => centerValue('auto'));
-    return () => cancelAnimationFrame(frame);
-  }, [centerValue]);
-
-  useEffect(() => () => clearTimeout(scrollTimerRef.current), []);
-
-  const selectCenteredValue = () => {
-    const container = scrollRef.current;
-    if (!container) return;
-    const center = container.scrollTop + container.clientHeight / 2;
-    const items = Array.from(container.querySelectorAll('[data-time-value]'));
-    const closest = items.reduce((best, item) => {
-      const itemCenter = item.offsetTop + item.clientHeight / 2;
-      return !best || Math.abs(itemCenter - center) < best.distance
-        ? { item, distance: Math.abs(itemCenter - center) }
-        : best;
-    }, null);
-    if (!closest) return;
-    const nextValue = Number(closest.item.dataset.timeValue);
-    if (nextValue !== value) onChange(nextValue);
-    container.scrollTo({
-      top: closest.item.offsetTop - (container.clientHeight - closest.item.clientHeight) / 2,
-      behavior: 'smooth',
-    });
-  };
-
-  return (
-    <div className="tp-col">
-      <div className="tp-label">{label}</div>
-      <div className="tp-scroll-shell">
-        <div
-          ref={scrollRef}
-          className="tp-scroll"
-          onScroll={() => {
-            clearTimeout(scrollTimerRef.current);
-            scrollTimerRef.current = setTimeout(selectCenteredValue, 90);
-          }}
-        >
-          {values.map(itemValue => (
-            <button
-              key={itemValue}
-              type="button"
-              data-time-value={itemValue}
-              className={`tp-item${itemValue === value ? ' active' : ''}`}
-              onClick={() => onChange(itemValue)}
-              aria-label={`${label}: ${String(itemValue).padStart(2, '0')}`}
-              aria-pressed={itemValue === value}
-            >
-              {String(itemValue).padStart(2, '0')}
-            </button>
-          ))}
-        </div>
-        <div className="tp-selection-band" aria-hidden="true" />
-      </div>
-    </div>
-  );
-}
-
 function TimePicker({ value, onChange }) {
   const [h, m] = (value || '09:00').split(':').map(Number);
 
@@ -211,11 +139,6 @@ function TimePicker({ value, onChange }) {
         <TimeNumberInput label="Часы" value={h} max={23} onCommit={newH => set(newH, m)} />
         <span className="tp-direct-sep">:</span>
         <TimeNumberInput label="Минуты" value={m} max={59} onCommit={newM => set(h, newM)} />
-      </div>
-      <div className="tp-wrap">
-        <TimeWheel label="ЧАС" values={TIME_HOURS} value={h} onChange={newH => set(newH, m)} />
-        <div className="tp-sep">:</div>
-        <TimeWheel label="МИН" values={TIME_MINUTES} value={m} onChange={newM => set(h, newM)} />
       </div>
     </div>
   );
@@ -271,7 +194,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
   const [priority, setPriority] = useState(1);
   const [isAllDay, setIsAllDay] = useState(true);
   const [dueDate, setDueDate]   = useState(todayStr());
-  const [dueTime, setDueTime]   = useState('09:00');
+  const [dueTime, setDueTime]   = useState(currentTimeStr);
   const [reminder, setReminder] = useState('-1');
   const [cyclic, setCyclic]     = useState('none');
   const [repeat, setRepeat]     = useState('none');
@@ -325,8 +248,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
         setPriority(1);
         setIsAllDay(true);
         setDueDate(editTask?.dueDate || td);
-        const now = new Date();
-        setDueTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+        setDueTime(currentTimeStr());
         setReminder('-1');
         setCyclic('none');
         setRepeat('none');

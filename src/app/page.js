@@ -216,13 +216,13 @@ export default function Dashboard() {
       
       if (da !== db2) return da.localeCompare(db2);
       
-      if (a.isAllDay && !b.isAllDay) return -1;
-      if (!a.isAllDay && b.isAllDay) return 1;
+      if (a.isAllDay && !b.isAllDay) return 1;
+      if (!a.isAllDay && b.isAllDay) return -1;
       return (a.dueTime || '').localeCompare(b.dueTime || '');
     } else {
       if (da !== db2) return da.localeCompare(db2);
-      if (a.isAllDay && !b.isAllDay) return -1;
-      if (!a.isAllDay && b.isAllDay) return 1;
+      if (a.isAllDay && !b.isAllDay) return 1;
+      if (!a.isAllDay && b.isAllDay) return -1;
       return (a.dueTime || '').localeCompare(b.dueTime || '');
     }
   });
