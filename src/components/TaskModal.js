@@ -79,72 +79,101 @@ function MiniCalendar({ value, onChange, tasks = [] }) {
 }
 
 // ─── Time Picker ──────────────────────────────────────────────────────────────
-function TimeNumberInput({ label, value, max, onCommit }) {
-  const inputRef = useRef(null);
+function TimeWheel({ label, value, max, onChange }) {
+  const wheelRef = useRef(null);
+  const settleTimerRef = useRef(null);
+  const digitBufferRef = useRef('');
+  const digitTimerRef = useRef(null);
+  const values = Array.from({ length: max + 1 }, (_, index) => index);
 
-  const commit = () => {
-    const parsed = Number.parseInt(inputRef.current?.value || '0', 10);
-    const nextValue = Number.isFinite(parsed) ? Math.min(max, Math.max(0, parsed)) : 0;
-    if (inputRef.current) inputRef.current.value = String(nextValue).padStart(2, '0');
-    onCommit(nextValue);
+  const scrollToValue = (nextValue, behavior = 'smooth') => {
+    const wheel = wheelRef.current;
+    const target = wheel?.querySelector(`[data-value="${nextValue}"]`);
+    if (!wheel || !target) return;
+    wheel.scrollTo({
+      top: target.offsetTop - (wheel.clientHeight - target.clientHeight) / 2,
+      behavior,
+    });
   };
 
-  const step = (direction) => {
-    const parsed = Number.parseInt(inputRef.current?.value || String(value), 10);
-    const current = Number.isFinite(parsed) ? Math.min(max, Math.max(0, parsed)) : 0;
-    const nextValue = (current + direction + max + 1) % (max + 1);
-    if (inputRef.current) inputRef.current.value = String(nextValue).padStart(2, '0');
-    onCommit(nextValue);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => scrollToValue(value, 'auto'));
+    return () => cancelAnimationFrame(frame);
+  }, [value]);
+
+  useEffect(() => () => {
+    clearTimeout(settleTimerRef.current);
+    clearTimeout(digitTimerRef.current);
+  }, []);
+
+  const selectCentered = () => {
+    const wheel = wheelRef.current;
+    if (!wheel) return;
+    const center = wheel.scrollTop + wheel.clientHeight / 2;
+    const items = Array.from(wheel.querySelectorAll('[data-value]'));
+    const selected = items.reduce((closest, item) => {
+      const distance = Math.abs(item.offsetTop + item.clientHeight / 2 - center);
+      return !closest || distance < closest.distance ? { item, distance } : closest;
+    }, null);
+    if (!selected) return;
+    const nextValue = Number(selected.item.dataset.value);
+    if (nextValue !== value) onChange(nextValue);
+    scrollToValue(nextValue);
+  };
+
+  const changeBy = (delta) => {
+    const nextValue = (value + delta + max + 1) % (max + 1);
+    onChange(nextValue);
+    scrollToValue(nextValue);
   };
 
   return (
-    <label className="tp-direct-field">
-      <span>{label}</span>
-      <div className="tp-stepper">
-        <button
-          type="button"
-          className="tp-step-btn"
-          aria-label={`Уменьшить ${label.toLowerCase()}`}
-          onClick={() => step(-1)}
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
-        </button>
-        <input
-          key={value}
-          ref={inputRef}
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          maxLength={2}
-          defaultValue={String(value).padStart(2, '0')}
-          aria-label={label === 'Часы' ? 'Введите часы' : 'Введите минуты'}
-          onFocus={event => event.currentTarget.select()}
-          onInput={event => {
-            event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '').slice(0, 2);
-          }}
-          onBlur={commit}
-          onKeyDown={event => {
-            if (event.key === 'Enter') {
-              event.preventDefault();
-              commit();
-              event.currentTarget.blur();
+    <div className="tp-wheel-column">
+      <div className="tp-wheel-label">{label}</div>
+      <div
+        ref={wheelRef}
+        className="tp-wheel"
+        tabIndex={0}
+        role="spinbutton"
+        aria-label={label === 'ЧАСЫ' ? 'Выбор часов' : 'Выбор минут'}
+        aria-valuemin={0}
+        aria-valuemax={max}
+        aria-valuenow={value}
+        onScroll={() => {
+          clearTimeout(settleTimerRef.current);
+          settleTimerRef.current = setTimeout(selectCentered, 80);
+        }}
+        onKeyDown={event => {
+          if (event.key === 'ArrowUp') { event.preventDefault(); changeBy(-1); }
+          if (event.key === 'ArrowDown') { event.preventDefault(); changeBy(1); }
+          if (/^\d$/.test(event.key)) {
+            digitBufferRef.current = `${digitBufferRef.current}${event.key}`.slice(-2);
+            clearTimeout(digitTimerRef.current);
+            digitTimerRef.current = setTimeout(() => { digitBufferRef.current = ''; }, 700);
+            const typedValue = Number(digitBufferRef.current);
+            if (typedValue <= max) {
+              onChange(typedValue);
+              scrollToValue(typedValue);
             }
-            if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-              event.preventDefault();
-              step(event.key === 'ArrowUp' ? 1 : -1);
-            }
-          }}
-        />
-        <button
-          type="button"
-          className="tp-step-btn"
-          aria-label={`Увеличить ${label.toLowerCase()}`}
-          onClick={() => step(1)}
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6" /></svg>
-        </button>
+          }
+        }}
+      >
+        {values.map(itemValue => (
+          <button
+            key={itemValue}
+            type="button"
+            data-value={itemValue}
+            className={`tp-wheel-value${itemValue === value ? ' active' : ''}`}
+            onClick={() => {
+              onChange(itemValue);
+              scrollToValue(itemValue);
+            }}
+          >
+            {String(itemValue).padStart(2, '0')}
+          </button>
+        ))}
       </div>
-    </label>
+    </div>
   );
 }
 
@@ -156,12 +185,10 @@ function TimePicker({ value, onChange }) {
   };
 
   return (
-    <div className="tp-control">
-      <div className="tp-direct-entry" aria-label="Ввод времени с клавиатуры">
-        <TimeNumberInput label="Часы" value={h} max={23} onCommit={newH => set(newH, m)} />
-        <span className="tp-direct-sep">:</span>
-        <TimeNumberInput label="Минуты" value={m} max={59} onCommit={newM => set(h, newM)} />
-      </div>
+    <div className="tp-wheel-panel">
+      <TimeWheel label="ЧАСЫ" value={h} max={23} onChange={newH => set(newH, m)} />
+      <span className="tp-wheel-separator">:</span>
+      <TimeWheel label="МИНУТЫ" value={m} max={59} onChange={newM => set(h, newM)} />
     </div>
   );
 }
