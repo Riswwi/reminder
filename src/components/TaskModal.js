@@ -38,6 +38,7 @@ function MiniCalendar({ value, onChange, tasks = [] }) {
     const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     cells.push({ d, ds });
   }
+  while (cells.length < 42) cells.push(null);
 
   return (
     <div className="mc-wrap">
@@ -53,7 +54,7 @@ function MiniCalendar({ value, onChange, tasks = [] }) {
       <div className="mc-grid">
         {WEEKDAYS_SHORT.map(w => <div key={w} className="mc-wday">{w}</div>)}
         {cells.map((cell, i) => {
-          if (cell === null) return <div key={`e${i}`} />;
+          if (cell === null) return <div key={`e${i}`} className="mc-empty" />;
           const hasTasks = tasks.some(t => t.dueDate === cell.ds && !t.done);
           return (
             <button
@@ -132,6 +133,7 @@ function TimeWheel({ label, value, max, onChange }) {
   const settleTimerRef = useRef(null);
   const digitBufferRef = useRef('');
   const digitTimerRef = useRef(null);
+  const dragRef = useRef({ active: false, startY: 0, startScrollTop: 0, moved: false });
   const values = Array.from({ length: max + 1 }, (_, index) => index);
 
   const scrollToValue = (nextValue, behavior = 'smooth') => {
@@ -193,7 +195,43 @@ function TimeWheel({ label, value, max, onChange }) {
         aria-valuenow={value}
         onScroll={() => {
           clearTimeout(settleTimerRef.current);
-          settleTimerRef.current = setTimeout(selectCentered, 160);
+          if (!dragRef.current.active) {
+            settleTimerRef.current = setTimeout(selectCentered, 160);
+          }
+        }}
+        onPointerDown={event => {
+          if (event.pointerType !== 'mouse' || event.button !== 0) return;
+          clearTimeout(settleTimerRef.current);
+          dragRef.current = {
+            active: true,
+            startY: event.clientY,
+            startScrollTop: event.currentTarget.scrollTop,
+            moved: false,
+          };
+          event.currentTarget.setPointerCapture(event.pointerId);
+          event.currentTarget.classList.add('dragging');
+        }}
+        onPointerMove={event => {
+          if (!dragRef.current.active) return;
+          const distance = event.clientY - dragRef.current.startY;
+          if (Math.abs(distance) > 3) dragRef.current.moved = true;
+          event.currentTarget.scrollTop = dragRef.current.startScrollTop - distance;
+          event.preventDefault();
+        }}
+        onPointerUp={event => {
+          if (!dragRef.current.active) return;
+          dragRef.current.active = false;
+          event.currentTarget.classList.remove('dragging');
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          }
+          settleTimerRef.current = setTimeout(selectCentered, 30);
+          setTimeout(() => { dragRef.current.moved = false; }, 0);
+        }}
+        onPointerCancel={event => {
+          dragRef.current.active = false;
+          dragRef.current.moved = false;
+          event.currentTarget.classList.remove('dragging');
         }}
         onKeyDown={event => {
           if (event.key === 'ArrowUp') { event.preventDefault(); changeBy(-1); }
@@ -217,6 +255,10 @@ function TimeWheel({ label, value, max, onChange }) {
             data-value={itemValue}
             className={`tp-wheel-value${itemValue === value ? ' active' : ''}`}
             onClick={() => {
+              if (dragRef.current.moved) {
+                dragRef.current.moved = false;
+                return;
+              }
               onChange(itemValue);
               scrollToValue(itemValue);
             }}
