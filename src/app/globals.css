@@ -788,13 +788,15 @@ input:checked + .slider:before { transform: translateX(22px); }
 
 /* ── Time Picker ──────────────────────────────────────────────── */
 .tp-wheel-panel {
-  display: flex; align-items: flex-start; justify-content: center;
-  height: 184px; padding: 10px 12px 12px;
-  border: 1px solid rgba(94,92,230,0.2); border-radius: 16px;
-  background: radial-gradient(circle at 50% 56%, rgba(94,92,230,0.1), transparent 62%), var(--bg-color);
+  display: grid;
+  grid-template-columns: 62px minmax(70px, 1fr) 14px minmax(70px, 1fr) 62px;
+  align-items: center; justify-content: center; column-gap: 4px;
+  height: 184px; padding: 10px 10px 12px;
+  border: 1px solid var(--border-color); border-radius: 16px;
+  background: var(--surface-light);
   overflow: hidden;
 }
-.tp-wheel-column { flex: 1; min-width: 0; }
+.tp-wheel-column { min-width: 0; align-self: start; }
 .tp-wheel-label {
   height: 28px; display: flex; align-items: center; justify-content: center;
   color: var(--text-muted); font-size: 10px; font-weight: 750;
@@ -817,14 +819,35 @@ input:checked + .slider:before { transform: translateX(22px); }
 }
 .tp-wheel-value:active { cursor: grabbing; }
 .tp-wheel-value.active {
-  color: #fff; font-size: 28px; font-weight: 850;
+  color: #d9d8ff; font-size: 28px; font-weight: 850;
   transform: scale(1.06);
-  text-shadow: 0 0 8px rgba(255,255,255,0.5), 0 0 20px rgba(94,92,230,0.9);
+  text-shadow: 0 0 8px rgba(255,255,255,0.5), 0 0 18px rgba(94,92,230,0.85);
 }
 .tp-wheel-separator {
-  flex: 0 0 14px; padding-top: 78px; text-align: center;
+  padding-top: 24px; text-align: center;
   color: var(--primary-color); font-size: 24px; font-weight: 850;
   text-shadow: 0 0 14px rgba(94,92,230,0.75);
+}
+.tp-keyboard-field {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  min-width: 0;
+}
+.tp-keyboard-field span {
+  color: var(--text-muted); font-size: 8px; font-weight: 750;
+  line-height: 1.15; letter-spacing: 0.4px; text-align: center;
+  text-transform: uppercase;
+}
+.tp-keyboard-field input {
+  width: 54px; height: 48px; padding: 0;
+  border: 1px solid var(--border-color); border-radius: 12px;
+  background: #242426; color: var(--text-color);
+  font: 800 23px/1 'Inter', monospace; text-align: center;
+  outline: none; caret-color: var(--primary-color);
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.tp-keyboard-field input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(94,92,230,0.2);
 }
 /* ── Responsive ──────────────────────────────────────────────── */
 @media (max-width: 700px) {

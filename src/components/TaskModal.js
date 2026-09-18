@@ -79,6 +79,54 @@ function MiniCalendar({ value, onChange, tasks = [] }) {
 }
 
 // ─── Time Picker ──────────────────────────────────────────────────────────────
+function TimeKeyboardInput({ label, value, max, onChange }) {
+  const inputRef = useRef(null);
+
+  const commit = () => {
+    const parsed = Number.parseInt(inputRef.current?.value || '0', 10);
+    const nextValue = Number.isFinite(parsed) ? Math.min(max, Math.max(0, parsed)) : 0;
+    if (inputRef.current) inputRef.current.value = String(nextValue).padStart(2, '0');
+    onChange(nextValue);
+  };
+
+  return (
+    <label className="tp-keyboard-field">
+      <span>{label}</span>
+      <input
+        key={value}
+        ref={inputRef}
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        maxLength={2}
+        defaultValue={String(value).padStart(2, '0')}
+        aria-label={label}
+        onFocus={event => event.currentTarget.select()}
+        onInput={event => {
+          event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '').slice(0, 2);
+        }}
+        onBlur={commit}
+        onKeyDown={event => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            commit();
+            event.currentTarget.blur();
+          }
+          if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+            event.preventDefault();
+            const direction = event.key === 'ArrowUp' ? 1 : -1;
+            const parsed = Number.parseInt(event.currentTarget.value || String(value), 10);
+            const current = Number.isFinite(parsed) ? Math.min(max, Math.max(0, parsed)) : 0;
+            const nextValue = (current + direction + max + 1) % (max + 1);
+            event.currentTarget.value = String(nextValue).padStart(2, '0');
+            onChange(nextValue);
+          }
+        }}
+      />
+    </label>
+  );
+}
+
 function TimeWheel({ label, value, max, onChange }) {
   const wheelRef = useRef(null);
   const settleTimerRef = useRef(null);
@@ -186,9 +234,11 @@ function TimePicker({ value, onChange }) {
 
   return (
     <div className="tp-wheel-panel">
+      <TimeKeyboardInput label="Ввод часов" value={h} max={23} onChange={newH => set(newH, m)} />
       <TimeWheel label="ЧАСЫ" value={h} max={23} onChange={newH => set(newH, m)} />
       <span className="tp-wheel-separator">:</span>
       <TimeWheel label="МИНУТЫ" value={m} max={59} onChange={newM => set(h, newM)} />
+      <TimeKeyboardInput label="Ввод минут" value={m} max={59} onChange={newM => set(h, newM)} />
     </div>
   );
 }
