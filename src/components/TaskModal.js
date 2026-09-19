@@ -444,8 +444,8 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
       } else {
         setTitle('');
         setDesc('');
-        setContentMode('description');
-        setChecklist([]);
+        setContentMode('checklist');
+        setChecklist([{ id: crypto.randomUUID(), text: '', done: false }]);
         setPriority(1);
         setIsAllDay(true);
         setDueDate(editTask?.dueDate || td);
@@ -656,10 +656,10 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                     />
                   ) : (
                     <div className="checklist-editor mt-2">
-                      {checklist.map((item, index) => (
+                      {checklist.map(item => (
                         <div className={`checklist-editor-item${item.done ? ' done' : ''}`} key={item.id}>
                           <button type="button" className="checklist-box" aria-label="Отметить пункт" onClick={() => updateChecklistItem(item.id, { done: !item.done })}>{item.done && '✓'}</button>
-                          <textarea data-checklist-id={item.id} autoFocus={index === checklist.length - 1 && !item.text} rows={1} value={item.text} placeholder="Новый пункт" onChange={event => updateChecklistItem(item.id, { text: event.target.value })} onKeyDown={event => {
+                          <textarea data-checklist-id={item.id} rows={1} value={item.text} placeholder="Новый пункт" onChange={event => updateChecklistItem(item.id, { text: event.target.value })} onKeyDown={event => {
                             if (event.key === 'Enter' && !event.shiftKey) {
                               event.preventDefault();
                               addChecklistItem(item.id);
