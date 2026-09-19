@@ -516,8 +516,14 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
     setChecklist(items => items.map(item => item.id === id ? { ...item, ...patch } : item));
   };
 
-  const addChecklistItem = () => {
-    setChecklist(items => [...items, { id: crypto.randomUUID(), text: '', done: false }]);
+  const addChecklistItem = (afterId = null) => {
+    const newItem = { id: crypto.randomUUID(), text: '', done: false };
+    setChecklist(items => {
+      if (!afterId) return [...items, newItem];
+      const index = items.findIndex(item => item.id === afterId);
+      return index < 0 ? [...items, newItem] : [...items.slice(0, index + 1), newItem, ...items.slice(index + 1)];
+    });
+    requestAnimationFrame(() => document.querySelector(`[data-checklist-id="${newItem.id}"]`)?.focus());
   };
 
   const priorityConfig = [
@@ -653,7 +659,12 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                       {checklist.map((item, index) => (
                         <div className={`checklist-editor-item${item.done ? ' done' : ''}`} key={item.id}>
                           <button type="button" className="checklist-box" aria-label="Отметить пункт" onClick={() => updateChecklistItem(item.id, { done: !item.done })}>{item.done && '✓'}</button>
-                          <input autoFocus={index === checklist.length - 1 && !item.text} value={item.text} placeholder="Новый пункт" onChange={event => updateChecklistItem(item.id, { text: event.target.value })} />
+                          <textarea data-checklist-id={item.id} autoFocus={index === checklist.length - 1 && !item.text} rows={1} value={item.text} placeholder="Новый пункт" onChange={event => updateChecklistItem(item.id, { text: event.target.value })} onKeyDown={event => {
+                            if (event.key === 'Enter' && !event.shiftKey) {
+                              event.preventDefault();
+                              addChecklistItem(item.id);
+                            }
+                          }} />
                           <button type="button" className="checklist-remove" aria-label="Удалить пункт" onClick={() => setChecklist(items => items.filter(candidate => candidate.id !== item.id))}>×</button>
                         </div>
                       ))}
