@@ -133,7 +133,8 @@ function TimeWheel({ label, value, max, onChange }) {
   const settleTimerRef = useRef(null);
   const digitBufferRef = useRef('');
   const digitTimerRef = useRef(null);
-  const lastWheelStepRef = useRef(0);
+  const wheelGestureLockedRef = useRef(false);
+  const wheelUnlockTimerRef = useRef(null);
   const dragRef = useRef({ active: false, startY: 0, startScrollTop: 0, moved: false });
   const values = Array.from({ length: max + 1 }, (_, index) => index);
 
@@ -157,6 +158,7 @@ function TimeWheel({ label, value, max, onChange }) {
   useEffect(() => () => {
     clearTimeout(settleTimerRef.current);
     clearTimeout(digitTimerRef.current);
+    clearTimeout(wheelUnlockTimerRef.current);
   }, []);
 
   const selectCentered = () => {
@@ -176,10 +178,10 @@ function TimeWheel({ label, value, max, onChange }) {
     scrollToValue(nextValue);
   };
 
-  const changeBy = (delta) => {
+  const changeBy = (delta, behavior = 'smooth') => {
     const nextValue = (value + delta + max + 1) % (max + 1);
     onChange(nextValue);
-    scrollToValue(nextValue);
+    scrollToValue(nextValue, behavior);
   };
 
   return (
@@ -196,15 +198,20 @@ function TimeWheel({ label, value, max, onChange }) {
         aria-valuenow={value}
         onWheel={event => {
           event.preventDefault();
+          event.stopPropagation();
           if (event.deltaY === 0) return;
-          const now = performance.now();
-          if (now - lastWheelStepRef.current < 110) return;
-          lastWheelStepRef.current = now;
-          changeBy(event.deltaY > 0 ? 1 : -1);
+          clearTimeout(wheelUnlockTimerRef.current);
+          if (!wheelGestureLockedRef.current) {
+            wheelGestureLockedRef.current = true;
+            changeBy(event.deltaY > 0 ? 1 : -1, 'auto');
+          }
+          wheelUnlockTimerRef.current = setTimeout(() => {
+            wheelGestureLockedRef.current = false;
+          }, 120);
         }}
         onScroll={() => {
           clearTimeout(settleTimerRef.current);
-          if (!dragRef.current.active) {
+          if (!dragRef.current.active && !wheelGestureLockedRef.current) {
             settleTimerRef.current = setTimeout(selectCentered, 160);
           }
         }}
@@ -354,12 +361,46 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
   const [repeat, setRepeat]     = useState('none');
   const [isSaving, setIsSaving] = useState(false);
   const [tasks, setTasks]       = useState([]);
+  const [hiddenTaskCount, setHiddenTaskCount] = useState(0);
 
   const [showRemSheet,    setShowRemSheet]    = useState(false);
   const [showCyclicSheet, setShowCyclicSheet] = useState(false);
   const [showRepeatSheet, setShowRepeatSheet] = useState(false);
 
   const titleRef = useRef(null);
+  const selectedTasksListRef = useRef(null);
+
+  const selectedDateTasks = tasks.filter(
+    task => task.dueDate === dueDate && !task.done && task.id !== editTask?.id
+  );
+
+  useEffect(() => {
+    const list = selectedTasksListRef.current;
+    if (!isOpen || !list) {
+      setHiddenTaskCount(0);
+      return undefined;
+    }
+
+    const updateHiddenTaskCount = () => {
+      const listBottom = list.getBoundingClientRect().bottom;
+      const hiddenBelow = Array.from(list.querySelectorAll('.sdt-item'))
+        .filter(item => item.getBoundingClientRect().bottom > listBottom + 1)
+        .length;
+      setHiddenTaskCount(hiddenBelow);
+    };
+
+    const frame = requestAnimationFrame(updateHiddenTaskCount);
+    const resizeObserver = new ResizeObserver(updateHiddenTaskCount);
+    resizeObserver.observe(list);
+    Array.from(list.children).forEach(item => resizeObserver.observe(item));
+    list.addEventListener('scroll', updateHiddenTaskCount, { passive: true });
+
+    return () => {
+      cancelAnimationFrame(frame);
+      resizeObserver.disconnect();
+      list.removeEventListener('scroll', updateHiddenTaskCount);
+    };
+  }, [isOpen, dueDate, tasks, editTask?.id]);
 
   // ESC to close
   useEffect(() => {
@@ -494,9 +535,9 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
             {/* Leftmost: Tasks for selected date */}
             <div className="task-modal-sdt-col">
               <div className="sdt-header">Задачи на {dueDate.split('-').reverse().join('.')}:</div>
-              {tasks.filter(t => t.dueDate === dueDate && !t.done && t.id !== editTask?.id).length > 0 ? (
-                <div className="sdt-list">
-                  {tasks.filter(t => t.dueDate === dueDate && !t.done && t.id !== editTask?.id).map(t => (
+              {selectedDateTasks.length > 0 ? (
+                <div className="sdt-list" ref={selectedTasksListRef}>
+                  {selectedDateTasks.map(t => (
                     <div key={t.id} className="sdt-item">
                       <div className="sdt-dot" />
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -512,6 +553,9 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                 <div style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 12 }}>
                   Задач на этот день нет
                 </div>
+              )}
+              {hiddenTaskCount > 0 && (
+                <div className="sdt-more">Ещё {hiddenTaskCount} задач</div>
               )}
             </div>
 
