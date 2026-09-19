@@ -352,6 +352,8 @@ const getRepeatText = (r) => ({
 export default function TaskModal({ isOpen, onClose, editTask = null }) {
   const [title, setTitle]       = useState('');
   const [desc, setDesc]         = useState('');
+  const [contentMode, setContentMode] = useState('description');
+  const [checklist, setChecklist] = useState([]);
   const [priority, setPriority] = useState(1);
   const [isAllDay, setIsAllDay] = useState(true);
   const [dueDate, setDueDate]   = useState(todayStr());
@@ -430,6 +432,8 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
       if (editTask && editTask.title) {
         setTitle(editTask.title || '');
         setDesc(editTask.desc || '');
+        setContentMode(editTask.contentMode === 'checklist' ? 'checklist' : 'description');
+        setChecklist(Array.isArray(editTask.checklist) ? editTask.checklist : []);
         setPriority(editTask.priority || 1);
         setIsAllDay(editTask.isAllDay !== false);
         setDueDate(editTask.dueDate || td);
@@ -440,6 +444,8 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
       } else {
         setTitle('');
         setDesc('');
+        setContentMode('description');
+        setChecklist([]);
         setPriority(1);
         setIsAllDay(true);
         setDueDate(editTask?.dueDate || td);
@@ -464,6 +470,12 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
     try {
       const taskData = {
         title: title.trim(), desc: desc.trim(), priority,
+        contentMode,
+        checklist: contentMode === 'checklist'
+          ? checklist
+              .map(item => ({ id: item.id || crypto.randomUUID(), text: (item.text || '').trim(), done: Boolean(item.done) }))
+              .filter(item => item.text)
+          : [],
         dueDate: dueDate || todayStr(),
         dueTime: isAllDay ? null : (dueTime || currentTimeStr()),
         isAllDay,
@@ -499,6 +511,14 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
   };
 
   if (!isOpen) return null;
+
+  const updateChecklistItem = (id, patch) => {
+    setChecklist(items => items.map(item => item.id === id ? { ...item, ...patch } : item));
+  };
+
+  const addChecklistItem = () => {
+    setChecklist(items => [...items, { id: crypto.randomUUID(), text: '', done: false }]);
+  };
 
   const priorityConfig = [
     { value: 3, label: 'Срочно',      cls: 'priority-3' },
@@ -611,18 +631,35 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSave(); } }}
                     autoComplete="off"
                   />
-                  <textarea
-                    className="transparent-textarea mt-2"
-                    rows="3"
-                    placeholder="Добавьте детали..."
-                    value={desc}
-                    style={{ minHeight: '64px', overflow: 'hidden' }}
-                    onChange={e => {
-                      setDesc(e.target.value);
-                      e.target.style.height = 'auto';
-                      e.target.style.height = e.target.scrollHeight + 'px';
-                    }}
-                  />
+                  <div className="task-content-switch" role="group" aria-label="Тип описания">
+                    <button type="button" className={contentMode === 'description' ? 'active' : ''} onClick={() => setContentMode('description')}>Описание</button>
+                    <button type="button" className={contentMode === 'checklist' ? 'active' : ''} onClick={() => setContentMode('checklist')}>To-do list</button>
+                  </div>
+                  {contentMode === 'description' ? (
+                    <textarea
+                      className="transparent-textarea mt-2"
+                      rows="3"
+                      placeholder="Добавьте детали..."
+                      value={desc}
+                      style={{ minHeight: '64px', overflow: 'hidden' }}
+                      onChange={e => {
+                        setDesc(e.target.value);
+                        e.target.style.height = 'auto';
+                        e.target.style.height = e.target.scrollHeight + 'px';
+                      }}
+                    />
+                  ) : (
+                    <div className="checklist-editor mt-2">
+                      {checklist.map((item, index) => (
+                        <div className={`checklist-editor-item${item.done ? ' done' : ''}`} key={item.id}>
+                          <button type="button" className="checklist-box" aria-label="Отметить пункт" onClick={() => updateChecklistItem(item.id, { done: !item.done })}>{item.done && '✓'}</button>
+                          <input autoFocus={index === checklist.length - 1 && !item.text} value={item.text} placeholder="Новый пункт" onChange={event => updateChecklistItem(item.id, { text: event.target.value })} />
+                          <button type="button" className="checklist-remove" aria-label="Удалить пункт" onClick={() => setChecklist(items => items.filter(candidate => candidate.id !== item.id))}>×</button>
+                        </div>
+                      ))}
+                      <button type="button" className="checklist-add" onClick={addChecklistItem}>+ Добавить пункт</button>
+                    </div>
+                  )}
                 </div>
                 <div className="priority-selector-col">
                   {priorityConfig.map(pc => (

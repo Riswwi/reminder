@@ -7,6 +7,7 @@ import { pingMobile } from '@/lib/pingMobile';
 
 export default function ViewTaskPopup({ isOpen, onClose, task }) {
   const [desc, setDesc] = useState('');
+  const [checklist, setChecklist] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const textareaRef = useRef(null);
 
@@ -14,6 +15,7 @@ export default function ViewTaskPopup({ isOpen, onClose, task }) {
     if (!isOpen || !task) return;
     const syncTimer = setTimeout(() => {
       setDesc(task.desc || '');
+      setChecklist(Array.isArray(task.checklist) ? task.checklist : []);
       requestAnimationFrame(() => {
         if (textareaRef.current) {
           textareaRef.current.style.height = 'auto';
@@ -39,6 +41,18 @@ export default function ViewTaskPopup({ isOpen, onClose, task }) {
       console.error('Error updating description:', e);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const toggleChecklistItem = async (itemId) => {
+    const nextChecklist = checklist.map(item => item.id === itemId ? { ...item, done: !item.done } : item);
+    setChecklist(nextChecklist);
+    try {
+      await updateDoc(doc(db, 'tasks', String(task.id)), { checklist: nextChecklist });
+      void pingMobile(task.id, 'upsert');
+    } catch (e) {
+      console.error('Error updating checklist:', e);
+      setChecklist(checklist);
     }
   };
 
@@ -77,27 +91,36 @@ export default function ViewTaskPopup({ isOpen, onClose, task }) {
           </span>
         </div>
         <div className="popup-body">
-          <textarea
-            ref={textareaRef}
-            className="transparent-textarea view-desc-edit"
-            placeholder="Добавьте описание задачи..."
-            value={desc}
-            onChange={(e) => {
-              setDesc(e.target.value);
-              e.target.style.height = 'auto';
-              e.target.style.height = e.target.scrollHeight + 'px';
-            }}
-          />
+          {task.contentMode === 'checklist' ? (
+            <div className="checklist-view">
+              {checklist.length ? checklist.map(item => (
+                <button type="button" className={`checklist-view-item${item.done ? ' done' : ''}`} key={item.id} onClick={() => toggleChecklistItem(item.id)}>
+                  <span className="checklist-box">{item.done && '✓'}</span>
+                  <span>{item.text}</span>
+                </button>
+              )) : <div className="checklist-empty">Список пока пуст</div>}
+            </div>
+          ) : (
+            <textarea
+              ref={textareaRef}
+              className="transparent-textarea view-desc-edit"
+              placeholder="Добавьте описание задачи..."
+              value={desc}
+              onChange={(e) => {
+                setDesc(e.target.value);
+                e.target.style.height = 'auto';
+                e.target.style.height = e.target.scrollHeight + 'px';
+              }}
+            />
+          )}
         </div>
-        <div className="popup-footer">
-          <button 
-            className="btn btn-primary w-100" 
-            onClick={handleSave} 
-            disabled={isSaving}
-          >
-            {isSaving ? 'Сохранение...' : 'Сохранить'}
-          </button>
-        </div>
+        {task.contentMode !== 'checklist' && (
+          <div className="popup-footer">
+            <button className="btn btn-primary w-100" onClick={handleSave} disabled={isSaving}>
+              {isSaving ? 'Сохранение...' : 'Сохранить'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
