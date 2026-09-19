@@ -8,14 +8,27 @@ import { pingMobile } from '@/lib/pingMobile';
 export default function ViewTaskPopup({ isOpen, onClose, task }) {
   const [desc, setDesc] = useState('');
   const [checklist, setChecklist] = useState([]);
+  const [contentMode, setContentMode] = useState('checklist');
+  const [isEmptyTask, setIsEmptyTask] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const textareaRef = useRef(null);
+
+  const newChecklistItem = () => ({
+    id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    text: '',
+    done: false
+  });
 
   useEffect(() => {
     if (!isOpen || !task) return;
     const syncTimer = setTimeout(() => {
-      setDesc(task.desc || '');
-      setChecklist(Array.isArray(task.checklist) ? task.checklist : []);
+      const storedDesc = task.desc || '';
+      const storedChecklist = Array.isArray(task.checklist) ? task.checklist : [];
+      const hasContent = Boolean(storedDesc.trim()) || storedChecklist.some(item => String(item?.text || '').trim());
+      setDesc(storedDesc);
+      setIsEmptyTask(!hasContent);
+      setContentMode(hasContent && task.contentMode === 'description' ? 'description' : 'checklist');
+      setChecklist(hasContent ? storedChecklist : [newChecklistItem()]);
       requestAnimationFrame(() => {
         if (textareaRef.current) {
           textareaRef.current.style.height = 'auto';
@@ -32,7 +45,11 @@ export default function ViewTaskPopup({ isOpen, onClose, task }) {
     setIsSaving(true);
     try {
       await updateDoc(doc(db, 'tasks', String(task.id)), {
-        desc: desc.trim()
+        desc: contentMode === 'description' ? desc.trim() : '',
+        contentMode,
+        checklist: contentMode === 'checklist'
+          ? checklist.map(item => ({ ...item, text: String(item.text || '').trim() })).filter(item => item.text)
+          : []
       });
       // Notify mobile app to sync
       void pingMobile(task.id, 'upsert');
@@ -54,6 +71,20 @@ export default function ViewTaskPopup({ isOpen, onClose, task }) {
       console.error('Error updating checklist:', e);
       setChecklist(checklist);
     }
+  };
+
+  const updateChecklistItem = (itemId, patch) => {
+    setChecklist(items => items.map(item => item.id === itemId ? { ...item, ...patch } : item));
+  };
+
+  const addChecklistItem = (afterId = null) => {
+    const item = newChecklistItem();
+    setChecklist(items => {
+      const index = afterId ? items.findIndex(candidate => candidate.id === afterId) : -1;
+      if (index < 0) return [...items, item];
+      return [...items.slice(0, index + 1), item, ...items.slice(index + 1)];
+    });
+    requestAnimationFrame(() => document.querySelector(`[data-view-checklist-id="${item.id}"]`)?.focus());
   };
 
   const priNames = { 1: 'Не срочно', 2: 'В скором времени', 3: 'Срочно' };
@@ -91,7 +122,30 @@ export default function ViewTaskPopup({ isOpen, onClose, task }) {
           </span>
         </div>
         <div className="popup-body">
-          {task.contentMode === 'checklist' ? (
+          {isEmptyTask && (
+            <div className="task-content-switch" role="group" aria-label="Тип описания">
+              <button type="button" className={contentMode === 'description' ? 'active' : ''} onClick={() => setContentMode('description')}>Описание</button>
+              <button type="button" className={contentMode === 'checklist' ? 'active' : ''} onClick={() => setContentMode('checklist')}>To-do list</button>
+            </div>
+          )}
+          {contentMode === 'checklist' ? (
+            isEmptyTask ? (
+              <div className="checklist-editor mt-2">
+                {checklist.map(item => (
+                  <div className={`checklist-editor-item${item.done ? ' done' : ''}`} key={item.id}>
+                    <button type="button" className="checklist-box" aria-label="Отметить пункт" onClick={() => updateChecklistItem(item.id, { done: !item.done })}>{item.done && '✓'}</button>
+                    <textarea data-view-checklist-id={item.id} rows={1} value={item.text} placeholder="Новый пункт" onChange={event => updateChecklistItem(item.id, { text: event.target.value })} onKeyDown={event => {
+                      if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault();
+                        addChecklistItem(item.id);
+                      }
+                    }} />
+                    <button type="button" className="checklist-remove" aria-label="Удалить пункт" onClick={() => setChecklist(items => items.filter(candidate => candidate.id !== item.id))}>×</button>
+                  </div>
+                ))}
+                <button type="button" className="checklist-add" onClick={() => addChecklistItem()}>+ Добавить пункт</button>
+              </div>
+            ) : (
             <div className="checklist-view">
               {checklist.length ? checklist.map(item => (
                 <button type="button" className={`checklist-view-item${item.done ? ' done' : ''}`} key={item.id} onClick={() => toggleChecklistItem(item.id)}>
@@ -100,6 +154,7 @@ export default function ViewTaskPopup({ isOpen, onClose, task }) {
                 </button>
               )) : <div className="checklist-empty">Список пока пуст</div>}
             </div>
+            )
           ) : (
             <textarea
               ref={textareaRef}
@@ -114,7 +169,7 @@ export default function ViewTaskPopup({ isOpen, onClose, task }) {
             />
           )}
         </div>
-        {task.contentMode !== 'checklist' && (
+        {(contentMode !== 'checklist' || isEmptyTask) && (
           <div className="popup-footer">
             <button className="btn btn-primary w-100" onClick={handleSave} disabled={isSaving}>
               {isSaving ? 'Сохранение...' : 'Сохранить'}
