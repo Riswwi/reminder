@@ -133,6 +133,7 @@ function TimeWheel({ label, value, max, onChange }) {
   const settleTimerRef = useRef(null);
   const digitBufferRef = useRef('');
   const digitTimerRef = useRef(null);
+  const lastWheelStepRef = useRef(0);
   const dragRef = useRef({ active: false, startY: 0, startScrollTop: 0, moved: false });
   const values = Array.from({ length: max + 1 }, (_, index) => index);
 
@@ -193,6 +194,14 @@ function TimeWheel({ label, value, max, onChange }) {
         aria-valuemin={0}
         aria-valuemax={max}
         aria-valuenow={value}
+        onWheel={event => {
+          event.preventDefault();
+          if (event.deltaY === 0) return;
+          const now = performance.now();
+          if (now - lastWheelStepRef.current < 110) return;
+          lastWheelStepRef.current = now;
+          changeBy(event.deltaY > 0 ? 1 : -1);
+        }}
         onScroll={() => {
           clearTimeout(settleTimerRef.current);
           if (!dragRef.current.active) {
@@ -415,7 +424,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
       const taskData = {
         title: title.trim(), desc: desc.trim(), priority,
         dueDate: dueDate || todayStr(),
-        dueTime: isAllDay ? '09:00' : (dueTime || '09:00'),
+        dueTime: isAllDay ? null : (dueTime || currentTimeStr()),
         isAllDay,
         reminderOffset: reminder !== '-1' ? parseInt(reminder) : null,
         customReminderMins: null,
@@ -516,21 +525,25 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                   <input type="checkbox" checked={isAllDay} onChange={e => {
                     const allDay = e.target.checked;
                     setIsAllDay(allDay);
-                    if (!allDay && reminder === '-1') setReminder('0');
+                    if (!allDay) {
+                      setDueTime(currentTimeStr());
+                      if (reminder === '-1') setReminder('0');
+                    }
                     else if (allDay) setReminder('-1');
                   }} />
                   <span className="slider round" />
                 </label>
               </div>
 
-              <div className="task-modal-time-section">
-                <div className="task-modal-time-label">Время</div>
-                <TimePicker value={dueTime} onChange={t => { 
-                  setDueTime(t); 
-                  setIsAllDay(false); 
-                  if (reminder === '-1') setReminder('0');
-                }} />
-              </div>
+              {!isAllDay && (
+                <div className="task-modal-time-section">
+                  <div className="task-modal-time-label">Время</div>
+                  <TimePicker value={dueTime} onChange={t => {
+                    setDueTime(t);
+                    if (reminder === '-1') setReminder('0');
+                  }} />
+                </div>
+              )}
             </div>
 
             {/* Right: Task details */}

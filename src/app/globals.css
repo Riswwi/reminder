@@ -749,7 +749,7 @@ input:checked + .slider:before { transform: translateX(22px); }
 .mc-wrap { width: 100%; }
 .mc-header {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
 }
 .mc-month { font-size: 14px; font-weight: 700; }
 .mc-nav {
@@ -763,15 +763,16 @@ input:checked + .slider:before { transform: translateX(22px); }
 
 .mc-grid {
   display: grid; grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: 22px repeat(6, 34px);
   gap: 2px;
 }
-.mc-empty { aspect-ratio: 1; }
+.mc-empty { height: 34px; }
 .mc-wday {
   text-align: center; font-size: 10px; font-weight: 700;
   color: var(--text-muted); text-transform: uppercase; padding: 4px 0;
 }
 .mc-day {
-  aspect-ratio: 1;
+  width: 100%; height: 34px;
   border: none; border-radius: 8px; background: transparent;
   color: var(--text-color); font-size: 13px; font-weight: 500;
   cursor: pointer; transition: background 0.12s, color 0.12s;
@@ -786,7 +787,7 @@ input:checked + .slider:before { transform: translateX(22px); }
 }
 .mc-day.selected { background: var(--primary-color); color: #fff; font-weight: 700; }
 .mc-day.selected::after { display: none; }
-.mc-footer { text-align: center; padding-top: 8px; }
+.mc-footer { text-align: center; padding-top: 4px; }
 
 /* ── Time Picker ──────────────────────────────────────────────── */
 .tp-wheel-panel {
