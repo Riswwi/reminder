@@ -72,6 +72,15 @@ export async function POST(req) {
         const compactTask = {
           id: Number.isSafeInteger(Number(taskId)) ? Number(taskId) : taskId,
           title: String(task.title || 'Без названия').slice(0, 500),
+          desc: String(task.desc || '').slice(0, 1200),
+          contentMode: task.contentMode === 'checklist' ? 'checklist' : 'description',
+          checklist: Array.isArray(task.checklist)
+            ? task.checklist.slice(0, 20).map(item => ({
+                id: String(item?.id || ''),
+                text: String(item?.text || '').slice(0, 160),
+                done: item?.done === true,
+              }))
+            : [],
           dueDate: task.dueDate || '',
           dueTime: task.dueTime || '',
           isAllDay: task.isAllDay !== false,
@@ -85,9 +94,15 @@ export async function POST(req) {
           priority: task.priority ?? 1,
           done: task.done === true,
         };
-        data.operation = 'upsert';
-        data.taskId = taskId;
-        data.task = JSON.stringify(compactTask);
+        const compactTaskJson = JSON.stringify(compactTask);
+        // FCM data messages are limited to 4 KB. For a long note we fall back
+        // to the native service's full Firestore refresh rather than truncate
+        // the description the user sees from the widget.
+        if (Buffer.byteLength(compactTaskJson, 'utf8') <= 3400) {
+          data.operation = 'upsert';
+          data.taskId = taskId;
+          data.task = compactTaskJson;
+        }
       }
     }
 
