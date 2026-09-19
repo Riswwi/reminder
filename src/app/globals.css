@@ -136,15 +136,17 @@ main {
   font-size: 13px; font-weight: 600; color: var(--text-muted);
 }
 .sort-toggle {
-  display: flex; background: var(--surface-light);
-  border-radius: 10px; overflow: hidden; gap: 0; padding: 0;
-  border: 1px solid var(--border-color);
+  display: inline-flex; width: fit-content; max-width: 100%;
+  background: rgba(255,255,255,0.035);
+  border-radius: 12px; overflow: hidden; gap: 3px; padding: 3px;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.16);
 }
 .sort-btn {
   display: flex; align-items: center; gap: 5px;
-  background: transparent; border: none; padding: 7px 13px;
+  background: transparent; border: none; padding: 8px 14px;
   font-size: 12px; font-weight: 600; color: var(--text-muted);
-  cursor: pointer; transition: all 0.22s ease; border-radius: 0;
+  cursor: pointer; transition: all 0.22s ease; border-radius: 9px;
   font-family: inherit; letter-spacing: 0.02em;
 }
 .sort-btn.active {
