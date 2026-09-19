@@ -230,14 +230,18 @@ export default function Dashboard() {
   const groups = [];
   if (sortMethod === 'priority') {
     const todayTasks = [];
-    const futureTasks = [];
+    const futureDateMap = new Map();
     sorted.forEach(t => {
       const d = t.dueDate || 'none';
-      if (d <= todayStr) todayTasks.push(t);
-      else futureTasks.push(t);
+      if (d <= todayStr) {
+        todayTasks.push(t);
+      } else {
+        if (!futureDateMap.has(d)) futureDateMap.set(d, []);
+        futureDateMap.get(d).push(t);
+      }
     });
     if (todayTasks.length > 0) groups.push({ label: 'Сегодня', tasks: todayTasks });
-    if (futureTasks.length > 0) groups.push({ label: 'Предстоящие', tasks: futureTasks });
+    futureDateMap.forEach((tasks, date) => groups.push({ date, label: fmtDate(date), tasks }));
   } else {
     const map = new Map();
     sorted.forEach(t => {
@@ -247,6 +251,7 @@ export default function Dashboard() {
     });
     map.forEach((tasks, date) => groups.push({ date, label: fmtDate(date), tasks }));
   }
+
 
   if (loading) {
     return (
