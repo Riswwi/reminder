@@ -225,6 +225,12 @@ export default function PricesPage() {
     setIsModalOpen(false);
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleSave();
+    }
+  };
+
   if (data.length === 0) return <div style={{padding: 20}}>Загрузка...</div>;
 
   const filteredData = data.map((cat, cIdx) => {
@@ -384,16 +390,16 @@ export default function PricesPage() {
             </div>
             <div className="form-group">
               <label>Название продукта</label>
-              <input type="text" className="styled-input w-100" placeholder="Например: Kurczak" value={newName} onChange={e => setNewName(e.target.value)} />
+              <input type="text" className="styled-input w-100" placeholder="Например: Kurczak" value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={handleKeyDown} />
             </div>
             <div className="form-group">
               <label>Магазин / Бренд / Акция</label>
-              <input type="text" className="styled-input w-100" placeholder="Например: biedronka 2+1" value={newBrand} onChange={e => setNewBrand(e.target.value)} />
+              <input type="text" className="styled-input w-100" placeholder="Например: biedronka 2+1" value={newBrand} onChange={e => setNewBrand(e.target.value)} onKeyDown={handleKeyDown} />
             </div>
             <div className="form-group" style={{ display: 'flex', gap: '8px' }}>
               <div style={{ flex: 1 }}>
                 <label>Цена</label>
-                <input type="number" step="0.01" className="styled-input w-100" placeholder="0.00" value={newPrice} onChange={e => setNewPrice(e.target.value)} />
+                <input type="number" step="0.01" className="styled-input w-100" placeholder="0.00" value={newPrice} onChange={e => setNewPrice(e.target.value)} onKeyDown={handleKeyDown} />
               </div>
               <div style={{ flex: 1 }}>
                 <label>Ед. изм.</label>
