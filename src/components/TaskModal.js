@@ -460,13 +460,16 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
   
   const [customReminders, setCustomReminders] = useState([]);
   const [customCyclics, setCustomCyclics]     = useState([]);
+  const [customRepeats, setCustomRepeats]     = useState([]);
 
   useEffect(() => {
     try {
       const cr = JSON.parse(localStorage.getItem('customReminders') || '[]');
       const cc = JSON.parse(localStorage.getItem('customCyclics') || '[]');
+      const crep = JSON.parse(localStorage.getItem('customRepeats') || '[]');
       setCustomReminders(Array.isArray(cr) ? cr : []);
       setCustomCyclics(Array.isArray(cc) ? cc : []);
+      setCustomRepeats(Array.isArray(crep) ? crep : []);
     } catch(e) {}
   }, []);
 
@@ -502,6 +505,27 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
     setCustomCyclics(newArr);
     localStorage.setItem('customCyclics', JSON.stringify(newArr));
     if (cyclic === String(mins)) setCyclic('none');
+  };
+
+  const addCustomRepeat = (repObj) => {
+    const str = JSON.stringify(repObj);
+    if (customRepeats.some(r => JSON.stringify(r) === str)) return;
+    if (customRepeats.length >= 3) { alert("Можно сохранить не более 3-х вариантов."); return; }
+    const newArr = [...customRepeats, repObj];
+    setCustomRepeats(newArr);
+    localStorage.setItem('customRepeats', JSON.stringify(newArr));
+    setCustomRepeat(repObj);
+    setRepeat('custom_' + str);
+    setShowRepeatSheet(false);
+  };
+  const removeCustomRepeat = (repStr) => {
+    const newArr = customRepeats.filter(r => JSON.stringify(r) !== repStr);
+    setCustomRepeats(newArr);
+    localStorage.setItem('customRepeats', JSON.stringify(newArr));
+    if (repeat === 'custom_' + repStr) {
+      setRepeat('none');
+      setCustomRepeat(null);
+    }
   };
 
   const titleRef = useRef(null);
@@ -620,9 +644,9 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
         customReminderMins: null,
         cyclicType: cyclic !== 'none' ? cyclic : null,
         customCyclicMins: null,
-        repeatType: repeat !== 'none' ? repeat : null,
+        repeatType: repeat.startsWith('custom_') ? 'custom' : (repeat !== 'none' ? repeat : null),
         repeatWeekdays: [], 
-        customRepeat: repeat === 'custom' ? customRepeat : null,
+        customRepeat: repeat.startsWith('custom_') ? JSON.parse(repeat.replace('custom_', '')) : null,
         fileData: null,
         done: editTask?.done || false,
       };
@@ -848,9 +872,6 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                         options={[
                           { value: '-1',  label: 'Без напоминания' },
                           { value: '0',   label: 'Вовремя' },
-                          { value: '5',   label: 'За 5 мин' },
-                          { value: '15',  label: 'За 15 мин' },
-                          { value: '60',  label: 'За 1 ч' },
                           ...customReminders.map(mins => ({ value: String(mins), label: getReminderText(String(mins)), canRemove: true })),
                           { value: 'custom', label: 'Свой вариант...' }
                         ]} 
@@ -882,9 +903,6 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                         onRemove={removeCustomCyclic}
                         options={[
                           { value: 'none', label: 'Без цикла' },
-                          { value: '5',    label: 'Каждые 5 мин' },
-                          { value: '15',   label: 'Каждые 15 мин' },
-                          { value: '60',   label: 'Каждые 1 ч' },
                           ...customCyclics.map(mins => ({ value: String(mins), label: getCyclicText(String(mins)), canRemove: true })),
                           { value: 'custom', label: 'Свой вариант...' }
                         ]} 
@@ -903,7 +921,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                       </svg>
                     </div>
                     <div className="property-content">
-                      <div className="property-title">{getRepeatText(repeat, customRepeat)}</div>
+                      <div className="property-title">{getRepeatText(repeat.startsWith('custom_') ? 'custom' : repeat, repeat.startsWith('custom_') ? JSON.parse(repeat.replace('custom_', '')) : customRepeat)}</div>
                       <div className="property-subtitle">Повтор</div>
                     </div>
                   </div>
@@ -911,19 +929,20 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                     <div className="inline-options-panel">
                       <RadioList 
                         name="rep" 
-                        value={repeat} 
+                        value={repeat === 'custom' ? 'custom' : repeat} 
                         onChange={v => { setRepeat(v); if(v !== 'custom') setShowRepeatSheet(false); }} 
+                        onRemove={removeCustomRepeat}
                         options={[
                           { value: 'none',    label: 'Не повторяется' },
-                          { value: 'daily',   label: 'Каждый день' },
-                          { value: 'weekly',  label: 'Каждую неделю' },
+                          ...customRepeats.map(repObj => ({ value: 'custom_' + JSON.stringify(repObj), label: getRepeatText('custom', repObj), canRemove: true })),
                           { value: 'custom',  label: 'Свой интервал...' }
                         ]} 
                       />
                       {repeat === 'custom' && (
                         <CustomRepeatPicker 
-                          value={customRepeat || {m:0, w:0, d:1}} 
-                          onChange={setCustomRepeat} 
+                          value={{m:0, w:0, d:1}} 
+                          onChange={(val) => setCustomRepeat(val)} 
+                          onAdd={addCustomRepeat}
                         />
                       )}
                     </div>
