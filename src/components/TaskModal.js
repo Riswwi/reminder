@@ -320,33 +320,121 @@ function BottomSheet({ isOpen, onClose, title, children }) {
   );
 }
 
-function RadioList({ name, value, onChange, options }) {
+function RadioList({ name, value, onChange, options, onRemove }) {
   return (
     <div className="radio-list">
       {options.map(opt => (
-        <label key={opt.value} className="radio-item">
-          <input type="radio" name={name} value={opt.value}
-            checked={value === opt.value} onChange={e => onChange(e.target.value)} />
-          <span>{opt.label}</span>
-        </label>
+        <div key={opt.value} style={{ display: 'flex', alignItems: 'center' }}>
+          <label className="radio-item" style={{ flex: 1 }}>
+            <input type="radio" name={name} value={opt.value}
+              checked={value === opt.value} onChange={e => onChange(e.target.value)} />
+            <span>{opt.label}</span>
+          </label>
+          {opt.canRemove && (
+            <button type="button" className="icon-btn" style={{ marginLeft: 8, color: 'var(--danger-color)', padding: 4 }}
+              onClick={(e) => { e.stopPropagation(); onRemove(opt.value); }}>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          )}
+        </div>
       ))}
     </div>
   );
 }
 
-const getReminderText = (r) => ({
-  '-1': 'Без напоминания', '0': 'Вовремя', '5': 'За 5 мин', '15': 'За 15 мин',
-  '30': 'За 30 мин', '60': 'За 1 ч', '120': 'За 2 ч', '1440': 'За 1 день'
-}[r] ?? 'Время до задачи');
+function CustomTimePicker({ onAdd }) {
+  const [d, setD] = useState(0);
+  const [h, setH] = useState(0);
+  const [m, setM] = useState(15);
+  
+  return (
+    <div className="custom-time-picker mt-2" style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px', background: 'var(--bg-secondary)', borderRadius: 8 }}>
+      <div style={{ display: 'flex', gap: 12 }}>
+         <TimeKeyboardInput label="Дни" value={d} max={30} onChange={setD} />
+         <TimeKeyboardInput label="Часы" value={h} max={23} onChange={setH} />
+         <TimeKeyboardInput label="Мин" value={m} max={59} onChange={setM} />
+      </div>
+      <button type="button" className="btn-text primary-text" style={{ alignSelf: 'flex-end', display: 'flex', alignItems: 'center', gap: 4 }}
+        onClick={(e) => { e.preventDefault(); onAdd(d * 1440 + h * 60 + m); }}>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+        Сохранить (Лайк)
+      </button>
+    </div>
+  );
+}
 
-const getCyclicText = (c) => ({
-  'none': 'Без цикла', '5': 'Каждые 5 мин', '15': 'Каждые 15 мин', '60': 'Каждые 1 ч', '120': 'Каждые 2 ч', '240': 'Каждые 4 ч'
-}[c] ?? 'Цикличное напоминание');
+function CustomRepeatPicker({ value, onChange }) {
+  const m = value?.m || 0;
+  const w = value?.w || 0;
+  const d = value?.d || 1;
+  
+  return (
+    <div className="custom-time-picker mt-2" style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px', background: 'var(--bg-secondary)', borderRadius: 8 }}>
+      <div style={{ display: 'flex', gap: 12 }}>
+         <TimeKeyboardInput label="Мес" value={m} max={12} onChange={(newM) => onChange({m: newM, w, d})} />
+         <TimeKeyboardInput label="Нед" value={w} max={4} onChange={(newW) => onChange({m, w: newW, d})} />
+         <TimeKeyboardInput label="Дни" value={d} max={30} onChange={(newD) => onChange({m, w, d: newD})} />
+      </div>
+    </div>
+  );
+}
 
-const getRepeatText = (r) => ({
-  'none': 'Не повторяется', 'daily': 'Каждый день',
-  'weekly': 'Каждую неделю', 'monthly': 'Каждый месяц', 'yearly': 'Каждый год'
-}[r] ?? '');
+const getReminderText = (r) => {
+  if (r === 'custom') return 'Свой вариант...';
+  const predefined = {
+    '-1': 'Без напоминания', '0': 'Вовремя', '5': 'За 5 мин', '15': 'За 15 мин',
+    '30': 'За 30 мин', '60': 'За 1 ч', '120': 'За 2 ч', '1440': 'За 1 день'
+  }[r];
+  if (predefined) return predefined;
+  const num = parseInt(r);
+  if (!isNaN(num)) {
+    const d = Math.floor(num/1440);
+    const h = Math.floor((num%1440)/60);
+    const m = num%60;
+    let text = [];
+    if (d>0) text.push(`${d} д.`);
+    if (h>0) text.push(`${h} ч.`);
+    if (m>0) text.push(`${m} мин.`);
+    return text.length > 0 ? `За ${text.join(' ')}` : 'За 0 мин';
+  }
+  return 'Время до задачи';
+};
+
+const getCyclicText = (c) => {
+  if (c === 'custom') return 'Свой вариант...';
+  const predefined = {
+    'none': 'Без цикла', '5': 'Каждые 5 мин', '15': 'Каждые 15 мин', '60': 'Каждые 1 ч', '120': 'Каждые 2 ч', '240': 'Каждые 4 ч'
+  }[c];
+  if (predefined) return predefined;
+  const num = parseInt(c);
+  if (!isNaN(num)) {
+    const d = Math.floor(num/1440);
+    const h = Math.floor((num%1440)/60);
+    const m = num%60;
+    let text = [];
+    if (d>0) text.push(`${d} д.`);
+    if (h>0) text.push(`${h} ч.`);
+    if (m>0) text.push(`${m} мин.`);
+    return text.length > 0 ? `Каждые ${text.join(' ')}` : 'Каждые 0 мин';
+  }
+  return 'Цикличное напоминание';
+};
+
+const getRepeatText = (r, cr) => {
+  if (r === 'custom') {
+    if (!cr) return 'Свой интервал...';
+    let parts = [];
+    if (cr.m > 0) parts.push(`${cr.m} мес.`);
+    if (cr.w > 0) parts.push(`${cr.w} нед.`);
+    if (cr.d > 0) parts.push(`${cr.d} дн.`);
+    return parts.length > 0 ? `Каждые ${parts.join(' ')}` : 'Не повторяется';
+  }
+  const predefined = {
+    'none': 'Не повторяется', 'daily': 'Каждый день',
+    'weekly': 'Каждую неделю', 'monthly': 'Каждый месяц', 'yearly': 'Каждый год'
+  }[r];
+  return predefined ?? 'Повтор';
+};
 
 // ─── Main Modal ───────────────────────────────────────────────────────────────
 export default function TaskModal({ isOpen, onClose, editTask = null }) {
@@ -361,6 +449,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
   const [reminder, setReminder] = useState('-1');
   const [cyclic, setCyclic]     = useState('none');
   const [repeat, setRepeat]     = useState('none');
+  const [customRepeat, setCustomRepeat] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [tasks, setTasks]       = useState([]);
   const [hiddenTaskCount, setHiddenTaskCount] = useState(0);
@@ -368,6 +457,52 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
   const [showRemSheet,    setShowRemSheet]    = useState(false);
   const [showCyclicSheet, setShowCyclicSheet] = useState(false);
   const [showRepeatSheet, setShowRepeatSheet] = useState(false);
+  
+  const [customReminders, setCustomReminders] = useState([]);
+  const [customCyclics, setCustomCyclics]     = useState([]);
+
+  useEffect(() => {
+    try {
+      const cr = JSON.parse(localStorage.getItem('customReminders') || '[]');
+      const cc = JSON.parse(localStorage.getItem('customCyclics') || '[]');
+      setCustomReminders(Array.isArray(cr) ? cr : []);
+      setCustomCyclics(Array.isArray(cc) ? cc : []);
+    } catch(e) {}
+  }, []);
+
+  const addCustomReminder = (mins) => {
+    if (mins <= 0) return;
+    if (customReminders.includes(mins)) return;
+    if (customReminders.length >= 3) { alert("Можно сохранить не более 3-х вариантов."); return; }
+    const newArr = [...customReminders, mins].sort((a,b)=>a-b);
+    setCustomReminders(newArr);
+    localStorage.setItem('customReminders', JSON.stringify(newArr));
+    setReminder(String(mins));
+    setShowRemSheet(false);
+  };
+  const removeCustomReminder = (mins) => {
+    const newArr = customReminders.filter(m => m !== mins);
+    setCustomReminders(newArr);
+    localStorage.setItem('customReminders', JSON.stringify(newArr));
+    if (reminder === String(mins)) setReminder('-1');
+  };
+
+  const addCustomCyclic = (mins) => {
+    if (mins <= 0) return;
+    if (customCyclics.includes(mins)) return;
+    if (customCyclics.length >= 3) { alert("Можно сохранить не более 3-х вариантов."); return; }
+    const newArr = [...customCyclics, mins].sort((a,b)=>a-b);
+    setCustomCyclics(newArr);
+    localStorage.setItem('customCyclics', JSON.stringify(newArr));
+    setCyclic(String(mins));
+    setShowCyclicSheet(false);
+  };
+  const removeCustomCyclic = (mins) => {
+    const newArr = customCyclics.filter(m => m !== mins);
+    setCustomCyclics(newArr);
+    localStorage.setItem('customCyclics', JSON.stringify(newArr));
+    if (cyclic === String(mins)) setCyclic('none');
+  };
 
   const titleRef = useRef(null);
   const selectedTasksListRef = useRef(null);
@@ -441,6 +576,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
         setReminder(editTask.reminderOffset !== null ? String(editTask.reminderOffset) : '-1');
         setCyclic(editTask.cyclicType || 'none');
         setRepeat(editTask.repeatType || 'none');
+        setCustomRepeat(editTask.customRepeat || null);
       } else {
         setTitle('');
         setDesc('');
@@ -453,6 +589,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
         setReminder('-1');
         setCyclic('none');
         setRepeat('none');
+        setCustomRepeat(null);
       }
       setIsSaving(false);
       requestAnimationFrame(() => {
@@ -484,7 +621,8 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
         cyclicType: cyclic !== 'none' ? cyclic : null,
         customCyclicMins: null,
         repeatType: repeat !== 'none' ? repeat : null,
-        repeatWeekdays: [], customRepeat: null,
+        repeatWeekdays: [], 
+        customRepeat: repeat === 'custom' ? customRepeat : null,
         fileData: null,
         done: editTask?.done || false,
       };
@@ -702,13 +840,22 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                   </div>
                   {showRemSheet && (
                     <div className="inline-options-panel">
-                      <RadioList name="rem" value={reminder} onChange={v => { setReminder(v); setShowRemSheet(false); }} options={[
-                        { value: '-1',  label: 'Без напоминания' },
-                        { value: '0',   label: 'Вовремя' },
-                        { value: '5',   label: 'За 5 мин' },
-                        { value: '15',  label: 'За 15 мин' },
-                        { value: '60',  label: 'За 1 ч' },
-                      ]} />
+                      <RadioList 
+                        name="rem" 
+                        value={reminder === 'custom' ? 'custom' : reminder} 
+                        onChange={v => { setReminder(v); if(v !== 'custom') setShowRemSheet(false); }} 
+                        onRemove={removeCustomReminder}
+                        options={[
+                          { value: '-1',  label: 'Без напоминания' },
+                          { value: '0',   label: 'Вовремя' },
+                          { value: '5',   label: 'За 5 мин' },
+                          { value: '15',  label: 'За 15 мин' },
+                          { value: '60',  label: 'За 1 ч' },
+                          ...customReminders.map(mins => ({ value: String(mins), label: getReminderText(String(mins)), canRemove: true })),
+                          { value: 'custom', label: 'Свой вариант...' }
+                        ]} 
+                      />
+                      {reminder === 'custom' && <CustomTimePicker onAdd={addCustomReminder} />}
                     </div>
                   )}
                 </div>
@@ -728,12 +875,21 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                   </div>
                   {showCyclicSheet && (
                     <div className="inline-options-panel">
-                      <RadioList name="cyc" value={cyclic} onChange={v => { setCyclic(v); setShowCyclicSheet(false); }} options={[
-                        { value: 'none', label: 'Без цикла' },
-                        { value: '5',    label: 'Каждые 5 мин' },
-                        { value: '15',   label: 'Каждые 15 мин' },
-                        { value: '60',   label: 'Каждые 1 ч' },
-                      ]} />
+                      <RadioList 
+                        name="cyc" 
+                        value={cyclic === 'custom' ? 'custom' : cyclic} 
+                        onChange={v => { setCyclic(v); if(v !== 'custom') setShowCyclicSheet(false); }} 
+                        onRemove={removeCustomCyclic}
+                        options={[
+                          { value: 'none', label: 'Без цикла' },
+                          { value: '5',    label: 'Каждые 5 мин' },
+                          { value: '15',   label: 'Каждые 15 мин' },
+                          { value: '60',   label: 'Каждые 1 ч' },
+                          ...customCyclics.map(mins => ({ value: String(mins), label: getCyclicText(String(mins)), canRemove: true })),
+                          { value: 'custom', label: 'Свой вариант...' }
+                        ]} 
+                      />
+                      {cyclic === 'custom' && <CustomTimePicker onAdd={addCustomCyclic} />}
                     </div>
                   )}
                 </div>
@@ -747,17 +903,29 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                       </svg>
                     </div>
                     <div className="property-content">
-                      <div className="property-title">{getRepeatText(repeat)}</div>
+                      <div className="property-title">{getRepeatText(repeat, customRepeat)}</div>
                       <div className="property-subtitle">Повтор</div>
                     </div>
                   </div>
                   {showRepeatSheet && (
                     <div className="inline-options-panel">
-                      <RadioList name="rep" value={repeat} onChange={v => { setRepeat(v); setShowRepeatSheet(false); }} options={[
-                        { value: 'none',    label: 'Не повторяется' },
-                        { value: 'daily',   label: 'Каждый день' },
-                        { value: 'weekly',  label: 'Каждую неделю' },
-                      ]} />
+                      <RadioList 
+                        name="rep" 
+                        value={repeat} 
+                        onChange={v => { setRepeat(v); if(v !== 'custom') setShowRepeatSheet(false); }} 
+                        options={[
+                          { value: 'none',    label: 'Не повторяется' },
+                          { value: 'daily',   label: 'Каждый день' },
+                          { value: 'weekly',  label: 'Каждую неделю' },
+                          { value: 'custom',  label: 'Свой интервал...' }
+                        ]} 
+                      />
+                      {repeat === 'custom' && (
+                        <CustomRepeatPicker 
+                          value={customRepeat || {m:0, w:0, d:1}} 
+                          onChange={setCustomRepeat} 
+                        />
+                      )}
                     </div>
                   )}
                 </div>
