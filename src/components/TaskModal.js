@@ -335,13 +335,13 @@ function RadioList({ name, value, onChange, options }) {
 }
 
 const getReminderText = (r) => ({
-  '-1': 'Без напоминания', '0': 'Вовремя', '15': 'За 15 мин',
-  '30': 'За 30 мин', '60': 'За 1 час', '120': 'За 2 часа', '1440': 'За 1 день'
-}[r] ?? 'Напоминание');
+  '-1': 'Без напоминания', '0': 'Вовремя', '5': 'За 5 мин', '15': 'За 15 мин',
+  '30': 'За 30 мин', '60': 'За 1 ч', '120': 'За 2 ч', '1440': 'За 1 день'
+}[r] ?? 'Время до задачи');
 
 const getCyclicText = (c) => ({
-  'none': 'Без цикла', '60': 'Каждый час', '120': 'Каждые 2 ч', '240': 'Каждые 4 ч'
-}[c] ?? 'Цикл');
+  'none': 'Без цикла', '5': 'Каждые 5 мин', '15': 'Каждые 15 мин', '60': 'Каждые 1 ч', '120': 'Каждые 2 ч', '240': 'Каждые 4 ч'
+}[c] ?? 'Цикличное напоминание');
 
 const getRepeatText = (r) => ({
   'none': 'Не повторяется', 'daily': 'Каждый день',
@@ -697,7 +697,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                     </div>
                     <div className="property-content">
                       <div className="property-title">{getReminderText(reminder)}</div>
-                      <div className="property-subtitle">Напоминание</div>
+                      <div className="property-subtitle">Время до задачи</div>
                     </div>
                   </div>
                   {showRemSheet && (
@@ -705,11 +705,9 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                       <RadioList name="rem" value={reminder} onChange={v => { setReminder(v); setShowRemSheet(false); }} options={[
                         { value: '-1',  label: 'Без напоминания' },
                         { value: '0',   label: 'Вовремя' },
-                        { value: '15',  label: 'За 15 минут' },
-                        { value: '30',  label: 'За 30 минут' },
-                        { value: '60',  label: 'За 1 час' },
-                        { value: '120', label: 'За 2 часа' },
-                        { value: '1440',label: 'За 1 день' },
+                        { value: '5',   label: 'За 5 мин' },
+                        { value: '15',  label: 'За 15 мин' },
+                        { value: '60',  label: 'За 1 ч' },
                       ]} />
                     </div>
                   )}
@@ -725,16 +723,16 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                     </div>
                     <div className="property-content">
                       <div className="property-title">{getCyclicText(cyclic)}</div>
-                      <div className="property-subtitle">Цикличность</div>
+                      <div className="property-subtitle">Цикличное напоминание</div>
                     </div>
                   </div>
                   {showCyclicSheet && (
                     <div className="inline-options-panel">
                       <RadioList name="cyc" value={cyclic} onChange={v => { setCyclic(v); setShowCyclicSheet(false); }} options={[
                         { value: 'none', label: 'Без цикла' },
-                        { value: '60',   label: 'Каждый час' },
-                        { value: '120',  label: 'Каждые 2 часа' },
-                        { value: '240',  label: 'Каждые 4 часа' },
+                        { value: '5',    label: 'Каждые 5 мин' },
+                        { value: '15',   label: 'Каждые 15 мин' },
+                        { value: '60',   label: 'Каждые 1 ч' },
                       ]} />
                     </div>
                   )}
@@ -759,8 +757,6 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                         { value: 'none',    label: 'Не повторяется' },
                         { value: 'daily',   label: 'Каждый день' },
                         { value: 'weekly',  label: 'Каждую неделю' },
-                        { value: 'monthly', label: 'Каждый месяц' },
-                        { value: 'yearly',  label: 'Каждый год' },
                       ]} />
                     </div>
                   )}
