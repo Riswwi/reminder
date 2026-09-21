@@ -89,7 +89,11 @@ const initialData = [
 
 export default function PricesPage() {
   const [data, setData] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null); // null or { cIdx, iIdx }
+  
   const [newCatIdx, setNewCatIdx] = useState(0);
   const [newName, setNewName] = useState('');
   const [newBrand, setNewBrand] = useState('');
@@ -111,63 +115,157 @@ export default function PricesPage() {
   };
 
   const handleDelete = (cIdx, iIdx) => {
-    if (window.confirm('Удалить этот товар?')) {
-      const newData = [...data];
-      newData[cIdx].items.splice(iIdx, 1);
-      saveData(newData);
-    }
+    const newData = [...data];
+    newData[cIdx].items.splice(iIdx, 1);
+    saveData(newData);
   };
 
-  const handleAdd = () => {
+  const openAddModal = () => {
+    setEditingItem(null);
+    setNewCatIdx(0);
+    setNewName('');
+    setNewBrand('');
+    setNewPrice('');
+    setNewUnit('zł/kg');
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (cIdx, iIdx) => {
+    const item = data[cIdx].items[iIdx];
+    setEditingItem({ cIdx, iIdx });
+    setNewCatIdx(cIdx);
+    setNewName(item.name);
+    setNewBrand(item.brand);
+    setNewPrice(item.price);
+    setNewUnit(item.unit);
+    setIsModalOpen(true);
+  };
+
+  const handleSave = () => {
     if (!newName.trim()) return alert('Введите название продукта!');
     const newData = [...data];
-    newData[newCatIdx].items.push({
+    const newItem = {
       name: newName.trim(),
       brand: newBrand.trim(),
       price: parseFloat(newPrice) || 0,
       unit: newUnit
-    });
+    };
+
+    if (editingItem) {
+      if (editingItem.cIdx === newCatIdx) {
+        newData[newCatIdx].items[editingItem.iIdx] = newItem;
+      } else {
+        newData[editingItem.cIdx].items.splice(editingItem.iIdx, 1);
+        newData[newCatIdx].items.push(newItem);
+      }
+    } else {
+      newData[newCatIdx].items.push(newItem);
+    }
+    
     saveData(newData);
     setIsModalOpen(false);
-    setNewName('');
-    setNewBrand('');
-    setNewPrice('');
   };
 
   if (data.length === 0) return <div style={{padding: 20}}>Загрузка...</div>;
 
+  const filteredData = data.map((cat, cIdx) => {
+    const filteredItems = cat.items.map((item, iIdx) => ({ ...item, originalIndex: iIdx }))
+      .filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                      item.brand.toLowerCase().includes(searchQuery.toLowerCase()));
+    return { ...cat, originalIndex: cIdx, items: filteredItems };
+  }).filter(cat => cat.items.length > 0);
+
   return (
     <div className="tasks-page" style={{ paddingBottom: '80px' }}>
-      <div className="tasks-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700' }}>Мониторинг цен</h2>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          style={{ background: 'var(--primary-color)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
-        >
-          + Добавить
-        </button>
+      <div className="tasks-toolbar" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700' }}>Мониторинг цен</h2>
+          <button 
+            onClick={openAddModal}
+            style={{ background: 'var(--primary-color)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+          >
+            + Добавить
+          </button>
+        </div>
+        
+        <div style={{ display: 'flex', width: '100%', position: 'relative' }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" 
+               style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'var(--text-muted)' }}>
+            <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input 
+            type="text" 
+            placeholder="Поиск по названию или магазину..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ 
+              width: '100%', 
+              padding: '10px 10px 10px 36px', 
+              borderRadius: '8px', 
+              border: '1px solid rgba(255,255,255,0.1)', 
+              background: 'rgba(30, 30, 30, 0.5)', 
+              color: '#fff',
+              fontSize: '14px',
+              outline: 'none'
+            }} 
+          />
+        </div>
       </div>
 
       <div className="tasks-body" style={{ padding: '0 16px', gap: '24px', display: 'flex', flexDirection: 'column' }}>
-        {data.map((cat, cIdx) => (
+        {filteredData.map((cat) => (
           <div key={cat.category} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <h3 style={{ margin: 0, fontSize: '16px', color: 'var(--primary-color)', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '6px' }}>
               {cat.category}
             </h3>
+            
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {cat.items.map((item, iIdx) => (
-                <div key={iIdx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(30, 30, 30, 0.5)', padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <div style={{ fontSize: '15px', fontWeight: '600', color: '#fff' }}>{item.name}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{item.brand || '-'}</div>
+              {/* Header row for columns */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(120px, 2fr) minmax(80px, 1.5fr) minmax(70px, 1fr) minmax(60px, 1fr) 70px', gap: '12px', padding: '0 16px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '600' }}>
+                <div>Название</div>
+                <div>Магазин/Акция</div>
+                <div>Цена</div>
+                <div>Ед. изм.</div>
+                <div style={{ textAlign: 'right' }}>Действия</div>
+              </div>
+
+              {cat.items.map((item) => (
+                <div key={item.originalIndex} style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'minmax(120px, 2fr) minmax(80px, 1.5fr) minmax(70px, 1fr) minmax(60px, 1fr) 70px', 
+                  gap: '12px', 
+                  alignItems: 'center', 
+                  background: 'rgba(30, 30, 30, 0.5)', 
+                  padding: '12px 16px', 
+                  borderRadius: '12px', 
+                  border: '1px solid rgba(255,255,255,0.05)' 
+                }}>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#fff', wordBreak: 'break-word' }}>
+                    {item.name}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--primary-color)', background: 'var(--primary-dim)', padding: '4px 8px', borderRadius: '6px' }}>
-                      {item.price.toFixed(2)} {item.unit}
-                    </div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-muted)', wordBreak: 'break-word' }}>
+                    {item.brand || '-'}
+                  </div>
+                  <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--primary-color)' }}>
+                    {item.price.toFixed(2)}
+                  </div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                    {item.unit}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
                     <button 
-                      onClick={() => handleDelete(cIdx, iIdx)}
+                      onClick={() => openEditModal(cat.originalIndex, item.originalIndex)}
+                      style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#fff', border: 'none', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex' }}
+                      title="Редактировать"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
+                        <path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                      </svg>
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(cat.originalIndex, item.originalIndex)}
                       style={{ background: 'rgba(255, 69, 58, 0.1)', color: '#FF453A', border: 'none', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex' }}
+                      title="Удалить"
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
                         <path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -184,7 +282,7 @@ export default function PricesPage() {
       {isModalOpen && (
         <div className="modal-overlay" style={{ zIndex: 1000 }} onClick={() => setIsModalOpen(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h2>Добавить товар</h2>
+            <h2>{editingItem ? 'Редактировать товар' : 'Добавить товар'}</h2>
             <div className="form-group mt-2">
               <label>Категория</label>
               <select className="styled-input w-100" value={newCatIdx} onChange={e => setNewCatIdx(Number(e.target.value))}>
@@ -215,7 +313,7 @@ export default function PricesPage() {
             </div>
             <div className="modal-actions" style={{ marginTop: '20px', flexDirection: 'row', gap: '12px' }}>
               <button className="btn btn-secondary w-100" onClick={() => setIsModalOpen(false)}>Отмена</button>
-              <button className="btn btn-primary w-100" onClick={handleAdd}>Сохранить</button>
+              <button className="btn btn-primary w-100" onClick={handleSave}>Сохранить</button>
             </div>
           </div>
         </div>
