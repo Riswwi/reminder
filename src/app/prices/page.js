@@ -3,53 +3,55 @@
 import { useState, useEffect } from 'react';
 
 const initialData = [
-  { name: "Awokado (Hass)", stores: [{ brand: "-", price: 16, unit: "zł/kg" }] },
-  { name: "Banan", stores: [{ brand: "-", price: 3.70, unit: "zł/kg" }] },
-  { name: "Borówka amerykańska", stores: [{ brand: "-", price: 30, unit: "zł/kg" }] },
-  { name: "Cytryna", stores: [{ brand: "-", price: 8.50, unit: "zł/kg" }] },
-  { name: "Dżem", stores: [{ brand: "2+1", price: 8.11, unit: "zł/kg" }] },
-  { name: "Jaja (rozmiar L/M)", stores: [{ brand: "-", price: 12, unit: "zł/kg" }] },
-  { name: "Jogurt typu Skyr", stores: [{ brand: "zniżka - 18%", price: 11.93, unit: "zł/kg" }] },
-  { name: "Kefir / Jogurt naturalny", stores: [{ brand: "-", price: 3.60, unit: "zł/kg" }] },
-  { name: "Ketchup", stores: [{ brand: "madero 2+1", price: 5.23, unit: "zł/kg" }] },
-  { name: "Kiełbasa Krakowska Parzona", stores: [{ brand: "kraina wędlin 2+1", price: 23, unit: "zł/kg" }] },
-  { name: "Kiwi", stores: [{ brand: "-", price: 10, unit: "zł/kg" }] },
-  { name: "Krewetki (mrożone)", stores: [{ brand: "-", price: 30, unit: "zł/kg" }] },
-  { name: "Kukurydza w puszce", stores: [{ brand: "-", price: 12, unit: "zł/kg" }] },
   { name: "Kurczak (filet z piersi)", stores: [{ brand: "biedronka/lidl", price: 14.99, unit: "zł/kg" }, { brand: "intermash", price: 13.99, unit: "zł/kg" }] },
-  { name: "Mango", stores: [{ brand: "-", price: 15, unit: "zł/kg" }] },
-  { name: "Migdały", stores: [{ brand: "bakador 2+1", price: 37.00, unit: "zł/kg" }, { brand: "bakador 3+3", price: 32.38, unit: "zł/kg" }] },
-  { name: "Mięso mielone z łopatki", stores: [{ brand: "-", price: 0, unit: "zł/kg" }] },
-  { name: "Mięso mielone z szynki", stores: [{ brand: "-", price: 0, unit: "zł/kg" }] },
   { name: "Mięso wieprzowe (schab)", stores: [{ brand: "-", price: 0, unit: "zł/kg" }] },
   { name: "Mięso wieprzowe (szynka)", stores: [{ brand: "-", price: 0, unit: "zł/kg" }] },
-  { name: "Mleko", stores: [{ brand: "-", price: 2.20, unit: "zł/l" }] },
-  { name: "Nivea z kolkiem", stores: [{ brand: "rossman wyprzedaż", price: 9.99, unit: "zł/szt" }, { brand: "1+1 biedronka", price: 8.25, unit: "zł/szt" }] },
-  { name: "Odżywka białkowa", stores: [{ brand: "Olimp Whey 2+1", price: 66, unit: "zł/kg" }] },
-  { name: "Olej Rzepakowy (z oliwek)", stores: [{ brand: "40%", price: 37, unit: "zł/l" }] },
-  { name: "Orzechy nerkowca", stores: [{ brand: "bakello 2+1", price: 41.20, unit: "zł/kg" }] },
-  { name: "Orzechy włoskie", stores: [{ brand: "2+1", price: 44.43, unit: "zł/kg" }] },
-  { name: "Owoce / Warzywa suszone", stores: [{ brand: "-", price: 40, unit: "zł/kg" }] },
-  { name: "Owoce mrożone (borówka/brzoskwinia)", stores: [{ brand: "2+1", price: 15.54, unit: "zł/kg" }] },
-  { name: "Paluszki rybne", stores: [{ brand: "-", price: 22, unit: "zł/kg" }] },
-  { name: "Parówki", stores: [{ brand: "-", price: 17.50, unit: "zł/kg" }] },
-  { name: "Pieczarki", stores: [{ brand: "-", price: 7, unit: "zł/kg" }] },
-  { name: "Pistacje", stores: [{ brand: "-", price: 45, unit: "zł/kg" }] },
-  { name: "Pizza mrożona", stores: [{ brand: "40%", price: 22.63, unit: "zł/kg" }] },
-  { name: "Pomarańcza / Mandarynka", stores: [{ brand: "-", price: 4.20, unit: "zł/kg" }] },
+  { name: "Mięso mielone z szynki", stores: [{ brand: "-", price: 0, unit: "zł/kg" }] },
+  { name: "Mięso mielone z łopatki", stores: [{ brand: "-", price: 0, unit: "zł/kg" }] },
   { name: "Połędwica Sopocka / Drobiowa", stores: [{ brand: "kraina wędlin 2+1", price: 23, unit: "zł/kg" }] },
-  { name: "Rodzynki", stores: [{ brand: "bakador 2+1", price: 17.30, unit: "zł/kg" }, { brand: "bakello 2+1", price: 14.50, unit: "zł/kg" }] },
-  { name: "Ręcznik papierowy", stores: [{ brand: "-", price: 15, unit: "zł/kg" }] },
-  { name: "Ser żółty", stores: [{ brand: "-", price: 20, unit: "zł/kg" }] },
   { name: "Szynka Gotowana", stores: [{ brand: "kraina wędlin 2+1", price: 23, unit: "zł/kg" }] },
   { name: "Szynka Konserwowa", stores: [{ brand: "kraina wędlin 2+1", price: 20, unit: "zł/kg" }] },
-  { name: "Tuńczyk (jednolity olej)", stores: [{ brand: "marinero 2+1", price: 29.19, unit: "zł/kg" }] },
-  { name: "Tuńczyk (jednolity sos)", stores: [{ brand: "2+1", price: 27.75, unit: "zł/kg" }] },
-  { name: "Tuńczyk (kawałki olej)", stores: [{ brand: "marinero 2+1", price: 33.77, unit: "zł/kg" }] },
-  { name: "Tuńczyk (kawałki sos)", stores: [{ brand: "2+1", price: 31.77, unit: "zł/kg" }] },
-  { name: "Twaróg", stores: [{ brand: "zniżka - 40%", price: 11.50, unit: "zł/kg" }, { brand: "2+1", price: 10.40, unit: "zł/kg" }] },
-  { name: "Winogrona", stores: [{ brand: "-", price: 10.50, unit: "zł/kg" }] },
+  { name: "Kiełbasa Krakowska Parzona", stores: [{ brand: "kraina wędlin 2+1", price: 23, unit: "zł/kg" }] },
+  { name: "Szynka Zawędzana", stores: [{ brand: "kraina wędlin 2+1", price: 23, unit: "zł/kg" }] },
+  { name: "Kiełbasa Kanapkowa z Szynki", stores: [{ brand: "kraina wędlin 2+1", price: 23, unit: "zł/kg" }] },
   { name: "Łosoś (świeży filet)", stores: [{ brand: "-", price: 40, unit: "zł/kg" }] },
+  { name: "Krewetki (mrożone)", stores: [{ brand: "-", price: 30, unit: "zł/kg" }] },
+  { name: "Tuńczyk (jednolity w sosie wlasnym)", stores: [{ brand: "2+1", price: 27.75, unit: "zł/kg" }] },
+  { name: "Tuńczyk (jednolity w oleju)", stores: [{ brand: "marinero 2+1", price: 29.19, unit: "zł/kg" }] },
+  { name: "Tuńczyk (kawałki w sosie wlasnym)", stores: [{ brand: "2+1", price: 31.77, unit: "zł/kg" }] },
+  { name: "Tuńczyk (kawałki w oleju)", stores: [{ brand: "marinero 2+1", price: 33.77, unit: "zł/kg" }] },
+  { name: "Paluszki rybne", stores: [{ brand: "-", price: 22, unit: "zł/kg" }] },
+  { name: "Parówki", stores: [{ brand: "-", price: 17.50, unit: "zł/kg" }] },
+  { name: "Jaja (rozmiar L/M)", stores: [{ brand: "-", price: 12.25, unit: "zł/kg" }] },
+  { name: "Jogurt typu Skyr", stores: [{ brand: "zniżka - 18%", price: 11.93, unit: "zł/kg" }] },
+  { name: "Twaróg", stores: [{ brand: "zniżka - 40%", price: 11.50, unit: "zł/kg" }, { brand: "2+1", price: 10.40, unit: "zł/kg" }] },
+  { name: "Mleko", stores: [{ brand: "-", price: 2.20, unit: "zł/l" }] },
+  { name: "Kefir / Jogurt naturalny", stores: [{ brand: "-", price: 3.60, unit: "zł/kg" }] },
+  { name: "Ser żółty", stores: [{ brand: "-", price: 20, unit: "zł/kg" }] },
+  { name: "Pieczarki", stores: [{ brand: "-", price: 7, unit: "zł/kg" }] },
+  { name: "Awokado (Hass)", stores: [{ brand: "-", price: 16, unit: "zł/kg" }] },
+  { name: "Kukurydza w puszce", stores: [{ brand: "-", price: 12, unit: "zł/kg" }] },
+  { name: "Banan", stores: [{ brand: "-", price: 3.74, unit: "zł/kg" }] },
+  { name: "Pomarańcza / Mandarynka", stores: [{ brand: "-", price: 4.25, unit: "zł/kg" }] },
+  { name: "Winogrona", stores: [{ brand: "-", price: 10.50, unit: "zł/kg" }] },
+  { name: "Kiwi", stores: [{ brand: "-", price: 10, unit: "zł/kg" }] },
+  { name: "Mango", stores: [{ brand: "-", price: 15, unit: "zł/kg" }] },
+  { name: "Cytryna", stores: [{ brand: "-", price: 8.50, unit: "zł/kg" }] },
+  { name: "Borówka amerykańska", stores: [{ brand: "-", price: 30, unit: "zł/kg" }] },
+  { name: "Owoce mrożone", stores: [{ brand: "borówka/brzoskwinia 2+1", price: 15.54, unit: "zł/kg" }] },
+  { name: "Pizza mrożona", stores: [{ brand: "40%", price: 22.63, unit: "zł/kg" }] },
+  { name: "Ketchup", stores: [{ brand: "madero 2+1", price: 5.23, unit: "zł/kg" }] },
+  { name: "Owoce / Warzywa suszone", stores: [{ brand: "-", price: 40, unit: "zł/kg" }] },
+  { name: "Dżem", stores: [{ brand: "2+1", price: 8.11, unit: "zł/kg" }] },
+  { name: "Pistacje", stores: [{ brand: "-", price: 45, unit: "zł/kg" }] },
+  { name: "Orzechy nerkowca", stores: [{ brand: "bakello 2+1", price: 41.20, unit: "zł/kg" }] },
+  { name: "Migdały", stores: [{ brand: "bakador 2+1", price: 37.00, unit: "zł/kg" }, { brand: "bakador 3+3", price: 32.38, unit: "zł/kg" }] },
+  { name: "Orzechy włoskie", stores: [{ brand: "2+1", price: 44.43, unit: "zł/kg" }] },
+  { name: "Rodzynki", stores: [{ brand: "bakador 2+1", price: 17.30, unit: "zł/kg" }, { brand: "bakello 2+1", price: 14.50, unit: "zł/kg" }] },
+  { name: "Olej Rzepakowy", stores: [{ brand: "olej z oliwek 40%", price: 37, unit: "zł/l" }] },
+  { name: "Ręcznik papierowy", stores: [{ brand: "-", price: 15, unit: "zł/kg" }] },
+  { name: "Nivea z kolkiem", stores: [{ brand: "rossman wyprzedaż", price: 9.99, unit: "zł/szt" }, { brand: "1+1 biedronka", price: 8.25, unit: "zł/szt" }] },
+  { name: "Odżywka białkowa", stores: [{ brand: "Olimp Whey Protein Complex 2+1", price: 66, unit: "zł/kg" }] }
 ];
 
 export default function PricesPage() {
@@ -231,7 +233,7 @@ export default function PricesPage() {
 
   return (
     <div className="tasks-page">
-      <div className="tasks-toolbar" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+      <div className="tasks-toolbar" style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '0 8px', marginTop: '16px' }}>
         <div style={{ display: 'flex', flex: 1, position: 'relative' }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" 
                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'var(--text-muted)' }}>
@@ -262,7 +264,7 @@ export default function PricesPage() {
         </button>
       </div>
 
-      <div className="tasks-body" style={{ padding: '0 16px', gap: '12px', display: 'flex', flexDirection: 'column' }}>
+      <div className="tasks-body" style={{ padding: '0 8px', gap: '12px', display: 'flex', flexDirection: 'column' }}>
         {filteredItems.map((item) => (
           <div key={item.originalIndex} style={{ 
             background: 'rgba(30, 30, 30, 0.5)', 
