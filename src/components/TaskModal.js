@@ -342,20 +342,22 @@ function RadioList({ name, value, onChange, options, onRemove }) {
   );
 }
 
-function CustomTimePicker({ onAdd }) {
-  const [d, setD] = useState(0);
-  const [h, setH] = useState(0);
-  const [m, setM] = useState(15);
+function CustomTimePicker({ value, onChange, onAdd }) {
+  const d = Math.floor(value / 1440) || 0;
+  const h = Math.floor((value % 1440) / 60) || 0;
+  const m = value % 60 || 0;
   
+  const update = (newD, newH, newM) => onChange(newD * 1440 + newH * 60 + newM);
+
   return (
     <div className="custom-time-picker mt-2" style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px', background: 'var(--bg-secondary)', borderRadius: 8 }}>
       <div style={{ display: 'flex', gap: 12 }}>
-         <TimeKeyboardInput label="Дни" value={d} max={30} onChange={setD} />
-         <TimeKeyboardInput label="Часы" value={h} max={23} onChange={setH} />
-         <TimeKeyboardInput label="Мин" value={m} max={59} onChange={setM} />
+         <TimeKeyboardInput label="Дни" value={d} max={30} onChange={v => update(v, h, m)} />
+         <TimeKeyboardInput label="Часы" value={h} max={23} onChange={v => update(d, v, m)} />
+         <TimeKeyboardInput label="Мин" value={m} max={59} onChange={v => update(d, h, v)} />
       </div>
       <button type="button" className="btn-text primary-text" style={{ alignSelf: 'flex-end', display: 'flex', alignItems: 'center', gap: 4 }}
-        onClick={(e) => { e.preventDefault(); onAdd(d * 1440 + h * 60 + m); }}>
+        onClick={(e) => { e.preventDefault(); onAdd(value); }}>
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
         Сохранить (Лайк)
       </button>
@@ -629,6 +631,11 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
     if (!title.trim() || isSaving) return;
     setIsSaving(true);
     try {
+      let finalRem = reminder;
+      if (finalRem === 'custom') finalRem = '15';
+      let finalCyc = cyclic;
+      if (finalCyc === 'custom') finalCyc = '60';
+
       const taskData = {
         title: title.trim(), desc: desc.trim(), priority,
         contentMode,
@@ -640,13 +647,13 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
         dueDate: dueDate || todayStr(),
         dueTime: isAllDay ? null : (dueTime || currentTimeStr()),
         isAllDay,
-        reminderOffset: reminder !== '-1' ? parseInt(reminder) : null,
+        reminderOffset: finalRem !== '-1' ? parseInt(finalRem) : null,
         customReminderMins: null,
-        cyclicType: cyclic !== 'none' ? cyclic : null,
+        cyclicType: finalCyc !== 'none' ? finalCyc : null,
         customCyclicMins: null,
-        repeatType: repeat.startsWith('custom_') ? 'custom' : (repeat !== 'none' ? repeat : null),
+        repeatType: (repeat.startsWith('custom_') || repeat === 'custom') ? 'custom' : (repeat !== 'none' ? repeat : null),
         repeatWeekdays: [], 
-        customRepeat: repeat.startsWith('custom_') ? JSON.parse(repeat.replace('custom_', '')) : null,
+        customRepeat: repeat.startsWith('custom_') ? JSON.parse(repeat.replace('custom_', '')) : (repeat === 'custom' ? (customRepeat || {m:0,w:0,d:1}) : null),
         fileData: null,
         done: editTask?.done || false,
       };
@@ -862,11 +869,14 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                       <div className="property-subtitle">Время до задачи</div>
                     </div>
                   </div>
-                  {showRemSheet && (
+                  {showRemSheet && (() => {
+                    const currentRemVal = (['-1', '0'].includes(reminder) || customReminders.includes(Number(reminder))) ? reminder : 'custom';
+                    const customRemMins = currentRemVal === 'custom' && reminder !== 'custom' ? Number(reminder) : 15;
+                    return (
                     <div className="inline-options-panel">
                       <RadioList 
                         name="rem" 
-                        value={reminder === 'custom' ? 'custom' : reminder} 
+                        value={currentRemVal} 
                         onChange={v => { setReminder(v); if(v !== 'custom') setShowRemSheet(false); }} 
                         onRemove={removeCustomReminder}
                         options={[
@@ -876,9 +886,9 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                           { value: 'custom', label: 'Свой вариант...' }
                         ]} 
                       />
-                      {reminder === 'custom' && <CustomTimePicker onAdd={addCustomReminder} />}
+                      {currentRemVal === 'custom' && <CustomTimePicker value={customRemMins} onChange={v => setReminder(String(v))} onAdd={addCustomReminder} />}
                     </div>
-                  )}
+                  )})()}
                 </div>
 
                 <div className="property-group">
@@ -894,11 +904,14 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                       <div className="property-subtitle">Цикличное напоминание</div>
                     </div>
                   </div>
-                  {showCyclicSheet && (
+                  {showCyclicSheet && (() => {
+                    const currentCycVal = (['none'].includes(cyclic) || customCyclics.includes(Number(cyclic))) ? cyclic : 'custom';
+                    const customCycMins = currentCycVal === 'custom' && cyclic !== 'custom' ? Number(cyclic) : 60;
+                    return (
                     <div className="inline-options-panel">
                       <RadioList 
                         name="cyc" 
-                        value={cyclic === 'custom' ? 'custom' : cyclic} 
+                        value={currentCycVal} 
                         onChange={v => { setCyclic(v); if(v !== 'custom') setShowCyclicSheet(false); }} 
                         onRemove={removeCustomCyclic}
                         options={[
@@ -907,9 +920,9 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                           { value: 'custom', label: 'Свой вариант...' }
                         ]} 
                       />
-                      {cyclic === 'custom' && <CustomTimePicker onAdd={addCustomCyclic} />}
+                      {currentCycVal === 'custom' && <CustomTimePicker value={customCycMins} onChange={v => setCyclic(String(v))} onAdd={addCustomCyclic} />}
                     </div>
-                  )}
+                  )})()}
                 </div>
 
                 <div className="property-group">
@@ -921,15 +934,17 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                       </svg>
                     </div>
                     <div className="property-content">
-                      <div className="property-title">{getRepeatText(repeat.startsWith('custom_') ? 'custom' : repeat, repeat.startsWith('custom_') ? JSON.parse(repeat.replace('custom_', '')) : customRepeat)}</div>
+                      <div className="property-title">{getRepeatText(repeat.startsWith('custom_') ? 'custom' : repeat, repeat.startsWith('custom_') ? JSON.parse(repeat.replace('custom_', '')) : (repeat === 'custom' ? customRepeat : null))}</div>
                       <div className="property-subtitle">Повтор</div>
                     </div>
                   </div>
-                  {showRepeatSheet && (
+                  {showRepeatSheet && (() => {
+                    const currentRepVal = (['none'].includes(repeat) || customRepeats.some(r => 'custom_' + JSON.stringify(r) === repeat)) ? repeat : 'custom';
+                    return (
                     <div className="inline-options-panel">
                       <RadioList 
                         name="rep" 
-                        value={repeat === 'custom' ? 'custom' : repeat} 
+                        value={currentRepVal} 
                         onChange={v => { setRepeat(v); if(v !== 'custom') setShowRepeatSheet(false); }} 
                         onRemove={removeCustomRepeat}
                         options={[
@@ -938,15 +953,15 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                           { value: 'custom',  label: 'Свой интервал...' }
                         ]} 
                       />
-                      {repeat === 'custom' && (
+                      {currentRepVal === 'custom' && (
                         <CustomRepeatPicker 
-                          value={{m:0, w:0, d:1}} 
+                          value={customRepeat || {m:0, w:0, d:1}} 
                           onChange={(val) => setCustomRepeat(val)} 
                           onAdd={addCustomRepeat}
                         />
                       )}
                     </div>
-                  )}
+                  )})()}
                 </div>
 
               </div>
