@@ -177,18 +177,8 @@ export default function PricesPage() {
 
   return (
     <div className="tasks-page" style={{ paddingBottom: '80px' }}>
-      <div className="tasks-toolbar" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700' }}>Мониторинг цен</h2>
-          <button 
-            onClick={openAddModal}
-            style={{ background: 'var(--primary-color)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
-          >
-            + Добавить
-          </button>
-        </div>
-        
-        <div style={{ display: 'flex', width: '100%', position: 'relative' }}>
+      <div className="tasks-toolbar" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', flex: 1, position: 'relative' }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" 
                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'var(--text-muted)' }}>
             <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -210,6 +200,12 @@ export default function PricesPage() {
             }} 
           />
         </div>
+        <button 
+          onClick={openAddModal}
+          style={{ background: 'var(--primary-color)', color: '#fff', border: 'none', padding: '10px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', flexShrink: 0 }}
+        >
+          + Добавить
+        </button>
       </div>
 
       <div className="tasks-body" style={{ padding: '0 16px', gap: '24px', display: 'flex', flexDirection: 'column' }}>
@@ -243,8 +239,19 @@ export default function PricesPage() {
                   <div style={{ fontSize: '14px', fontWeight: '600', color: '#fff', wordBreak: 'break-word' }}>
                     {item.name}
                   </div>
-                  <div style={{ fontSize: '13px', color: 'var(--text-muted)', wordBreak: 'break-word' }}>
-                    {item.brand || '-'}
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <span style={{ 
+                      fontSize: '12px', 
+                      fontWeight: '600',
+                      color: item.brand ? '#FF9F0A' : 'var(--text-muted)', 
+                      background: item.brand ? 'rgba(255, 159, 10, 0.15)' : 'transparent',
+                      padding: item.brand ? '4px 8px' : '0',
+                      borderRadius: '6px',
+                      wordBreak: 'break-word',
+                      border: item.brand ? '1px solid rgba(255, 159, 10, 0.3)' : 'none'
+                    }}>
+                      {item.brand || '-'}
+                    </span>
                   </div>
                   <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--primary-color)' }}>
                     {item.price.toFixed(2)}
