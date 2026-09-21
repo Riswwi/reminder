@@ -176,7 +176,7 @@ export default function PricesPage() {
   }).filter(cat => cat.items.length > 0);
 
   return (
-    <div className="tasks-page" style={{ paddingBottom: '80px' }}>
+    <div className="tasks-page">
       <div className="tasks-toolbar" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
         <div style={{ display: 'flex', flex: 1, position: 'relative' }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" 
