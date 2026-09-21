@@ -68,7 +68,7 @@ export default function RootLayout({ children }) {
             {children}
           </main>
 
-          {!isTaskModalOpen && (
+          {!isTaskModalOpen && pathname !== '/prices' && (
             <button
               className="fab"
               aria-label="Добавить событие"
