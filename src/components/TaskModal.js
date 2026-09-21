@@ -466,12 +466,12 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
 
   useEffect(() => {
     try {
-      const cr = JSON.parse(localStorage.getItem('customReminders') || '[]');
-      const cc = JSON.parse(localStorage.getItem('customCyclics') || '[]');
-      const crep = JSON.parse(localStorage.getItem('customRepeats') || '[]');
-      setCustomReminders(Array.isArray(cr) ? cr : []);
-      setCustomCyclics(Array.isArray(cc) ? cc : []);
-      setCustomRepeats(Array.isArray(crep) ? crep : []);
+      const cr = localStorage.getItem('customReminders');
+      const cc = localStorage.getItem('customCyclics');
+      const crep = localStorage.getItem('customRepeats');
+      setCustomReminders(cr ? JSON.parse(cr) : [5, 15, 60]);
+      setCustomCyclics(cc ? JSON.parse(cc) : [5, 15, 60]);
+      setCustomRepeats(crep ? JSON.parse(crep) : []);
     } catch(e) {}
   }, []);
 
@@ -485,7 +485,8 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
     setReminder(String(mins));
     setShowRemSheet(false);
   };
-  const removeCustomReminder = (mins) => {
+  const removeCustomReminder = (minsStr) => {
+    const mins = Number(minsStr);
     const newArr = customReminders.filter(m => m !== mins);
     setCustomReminders(newArr);
     localStorage.setItem('customReminders', JSON.stringify(newArr));
@@ -502,7 +503,8 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
     setCyclic(String(mins));
     setShowCyclicSheet(false);
   };
-  const removeCustomCyclic = (mins) => {
+  const removeCustomCyclic = (minsStr) => {
+    const mins = Number(minsStr);
     const newArr = customCyclics.filter(m => m !== mins);
     setCustomCyclics(newArr);
     localStorage.setItem('customCyclics', JSON.stringify(newArr));
@@ -521,10 +523,11 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
     setShowRepeatSheet(false);
   };
   const removeCustomRepeat = (repStr) => {
-    const newArr = customRepeats.filter(r => JSON.stringify(r) !== repStr);
+    const jsonStr = repStr.replace('custom_', '');
+    const newArr = customRepeats.filter(r => JSON.stringify(r) !== jsonStr);
     setCustomRepeats(newArr);
     localStorage.setItem('customRepeats', JSON.stringify(newArr));
-    if (repeat === 'custom_' + repStr) {
+    if (repeat === repStr) {
       setRepeat('none');
       setCustomRepeat(null);
     }
@@ -949,6 +952,8 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                         onRemove={removeCustomRepeat}
                         options={[
                           { value: 'none',    label: 'Не повторяется' },
+                          { value: 'daily',   label: 'Каждый день' },
+                          { value: 'weekly',  label: 'Каждую неделю' },
                           ...customRepeats.map(repObj => ({ value: 'custom_' + JSON.stringify(repObj), label: getRepeatText('custom', repObj), canRemove: true })),
                           { value: 'custom',  label: 'Свой интервал...' }
                         ]} 
