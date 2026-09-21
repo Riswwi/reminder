@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { db } from '@/lib/firebase';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
 const initialData = [
   { name: "Kurczak (filet z piersi)", stores: [{ brand: "biedronka/lidl", price: 14.99, unit: "zł/kg" }, { brand: "intermash", price: 13.99, unit: "zł/kg" }] },
@@ -68,57 +70,27 @@ export default function PricesPage() {
   const [newUnit, setNewUnit] = useState('zł/kg');
 
   useEffect(() => {
-    const saved = localStorage.getItem('webPricesData');
-    let loadedData = saved ? JSON.parse(saved) : initialData;
-
-    let migrated = false;
-    
-    // Migration 1: Flatten categories if they exist
-    if (loadedData.length > 0 && loadedData[0].category) {
-      migrated = true;
-      let flatArray = [];
-      loadedData.forEach(cat => {
-        if (cat.items && Array.isArray(cat.items)) {
-          flatArray.push(...cat.items);
-        }
-      });
-      loadedData = flatArray;
-    }
-
-    // Migration 2: Ensure stores format and group by name, then sort
-    const newItemsMap = new Map();
-    loadedData.forEach(item => {
-      if (!item.stores) {
-        migrated = true;
-        if (!newItemsMap.has(item.name)) {
-          newItemsMap.set(item.name, { name: item.name, stores: [] });
-        }
-        newItemsMap.get(item.name).stores.push({ brand: item.brand, price: item.price, unit: item.unit });
+    const unsub = onSnapshot(doc(db, 'data', 'prices'), (snapshot) => {
+      if (snapshot.exists()) {
+        const loadedData = snapshot.data().items || [];
+        loadedData.sort((a, b) => a.name.localeCompare(b.name));
+        setData(loadedData);
       } else {
-        if (!newItemsMap.has(item.name)) {
-          newItemsMap.set(item.name, { name: item.name, stores: [] });
-        }
-        newItemsMap.get(item.name).stores.push(...item.stores);
+        // Initialize with default data if empty
+        const defaultData = [...initialData];
+        defaultData.sort((a, b) => a.name.localeCompare(b.name));
+        setDoc(doc(db, 'data', 'prices'), { items: defaultData });
+        setData(defaultData);
       }
     });
-
-    loadedData = Array.from(newItemsMap.values());
-
-    // Sort alphabetically by default
-    loadedData.sort((a, b) => a.name.localeCompare(b.name));
-
-    if (migrated || !saved) {
-      localStorage.setItem('webPricesData', JSON.stringify(loadedData));
-    }
-    
-    setData(loadedData);
+    return () => unsub();
   }, []);
 
-  const saveData = (newData) => {
+  const saveData = async (newData) => {
     // Sort before saving
     newData.sort((a, b) => a.name.localeCompare(b.name));
-    setData(newData);
-    localStorage.setItem('webPricesData', JSON.stringify(newData));
+    setData(newData); // Optimistic UI update
+    await setDoc(doc(db, 'data', 'prices'), { items: newData });
   };
 
   const handleDeleteProduct = (iIdx) => {
