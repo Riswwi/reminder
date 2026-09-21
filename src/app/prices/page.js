@@ -217,7 +217,7 @@ export default function PricesPage() {
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {/* Header row for columns */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(120px, 2fr) minmax(80px, 1.5fr) minmax(70px, 1fr) minmax(60px, 1fr) 70px', gap: '12px', padding: '0 16px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '600' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(110px, 2.5fr) minmax(80px, 2fr) minmax(50px, 0.8fr) minmax(40px, 0.6fr) 70px', gap: '12px', padding: '0 16px', color: 'var(--text-muted)', fontSize: '14px', fontWeight: '600' }}>
                 <div>Название</div>
                 <div>Магазин/Акция</div>
                 <div>Цена</div>
@@ -228,7 +228,7 @@ export default function PricesPage() {
               {cat.items.map((item) => (
                 <div key={item.originalIndex} style={{ 
                   display: 'grid', 
-                  gridTemplateColumns: 'minmax(120px, 2fr) minmax(80px, 1.5fr) minmax(70px, 1fr) minmax(60px, 1fr) 70px', 
+                  gridTemplateColumns: 'minmax(110px, 2.5fr) minmax(80px, 2fr) minmax(50px, 0.8fr) minmax(40px, 0.6fr) 70px', 
                   gap: '12px', 
                   alignItems: 'center', 
                   background: 'rgba(30, 30, 30, 0.5)', 
@@ -236,12 +236,12 @@ export default function PricesPage() {
                   borderRadius: '12px', 
                   border: '1px solid rgba(255,255,255,0.05)' 
                 }}>
-                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#fff', wordBreak: 'break-word' }}>
+                  <div style={{ fontSize: '16px', fontWeight: '600', color: '#fff', wordBreak: 'break-word' }}>
                     {item.name}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center' }}>
                     <span style={{ 
-                      fontSize: '12px', 
+                      fontSize: '13px', 
                       fontWeight: '600',
                       color: item.brand ? '#FF9F0A' : 'var(--text-muted)', 
                       background: item.brand ? 'rgba(255, 159, 10, 0.15)' : 'transparent',
@@ -253,10 +253,10 @@ export default function PricesPage() {
                       {item.brand || '-'}
                     </span>
                   </div>
-                  <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--primary-color)' }}>
+                  <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--primary-color)' }}>
                     {item.price.toFixed(2)}
                   </div>
-                  <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
                     {item.unit}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
