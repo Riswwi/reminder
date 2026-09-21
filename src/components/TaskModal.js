@@ -466,9 +466,9 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
 
   useEffect(() => {
     try {
-      const cr = localStorage.getItem('customReminders');
-      const cc = localStorage.getItem('customCyclics');
-      const crep = localStorage.getItem('customRepeats');
+      const cr = localStorage.getItem('customRem_v2');
+      const cc = localStorage.getItem('customCyc_v2');
+      const crep = localStorage.getItem('customRep_v2');
       setCustomReminders(cr ? JSON.parse(cr) : [5, 15, 60]);
       setCustomCyclics(cc ? JSON.parse(cc) : [5, 15, 60]);
       setCustomRepeats(crep ? JSON.parse(crep) : []);
@@ -481,7 +481,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
     if (customReminders.length >= 3) { alert("Можно сохранить не более 3-х вариантов."); return; }
     const newArr = [...customReminders, mins].sort((a,b)=>a-b);
     setCustomReminders(newArr);
-    localStorage.setItem('customReminders', JSON.stringify(newArr));
+    localStorage.setItem('customRem_v2', JSON.stringify(newArr));
     setReminder(String(mins));
     setShowRemSheet(false);
   };
@@ -489,7 +489,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
     const mins = Number(minsStr);
     const newArr = customReminders.filter(m => m !== mins);
     setCustomReminders(newArr);
-    localStorage.setItem('customReminders', JSON.stringify(newArr));
+    localStorage.setItem('customRem_v2', JSON.stringify(newArr));
     if (reminder === String(mins)) setReminder('-1');
   };
 
@@ -499,7 +499,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
     if (customCyclics.length >= 3) { alert("Можно сохранить не более 3-х вариантов."); return; }
     const newArr = [...customCyclics, mins].sort((a,b)=>a-b);
     setCustomCyclics(newArr);
-    localStorage.setItem('customCyclics', JSON.stringify(newArr));
+    localStorage.setItem('customCyc_v2', JSON.stringify(newArr));
     setCyclic(String(mins));
     setShowCyclicSheet(false);
   };
@@ -507,7 +507,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
     const mins = Number(minsStr);
     const newArr = customCyclics.filter(m => m !== mins);
     setCustomCyclics(newArr);
-    localStorage.setItem('customCyclics', JSON.stringify(newArr));
+    localStorage.setItem('customCyc_v2', JSON.stringify(newArr));
     if (cyclic === String(mins)) setCyclic('none');
   };
 
@@ -517,7 +517,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
     if (customRepeats.length >= 3) { alert("Можно сохранить не более 3-х вариантов."); return; }
     const newArr = [...customRepeats, repObj];
     setCustomRepeats(newArr);
-    localStorage.setItem('customRepeats', JSON.stringify(newArr));
+    localStorage.setItem('customRep_v2', JSON.stringify(newArr));
     setCustomRepeat(repObj);
     setRepeat('custom_' + str);
     setShowRepeatSheet(false);
@@ -526,7 +526,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
     const jsonStr = repStr.replace('custom_', '');
     const newArr = customRepeats.filter(r => JSON.stringify(r) !== jsonStr);
     setCustomRepeats(newArr);
-    localStorage.setItem('customRepeats', JSON.stringify(newArr));
+    localStorage.setItem('customRep_v2', JSON.stringify(newArr));
     if (repeat === repStr) {
       setRepeat('none');
       setCustomRepeat(null);
