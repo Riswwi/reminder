@@ -45,7 +45,7 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
         setRemoteMessage('Подключение проверено.');
       } else if (action === 'setDaily') {
         setRemoteStatus(current => ({ ...current, dailyEnabled: enabled }));
-        setRemoteMessage(enabled ? 'Ежедневные копии включены.' : 'Ежедневные копии выключены. Ручное сохранение доступно.');
+        setRemoteMessage(enabled ? 'Ежедневные копии Vercel включены.' : 'Ежедневные копии Vercel выключены. Google Drive управляется отдельно.');
       } else {
         const drive = result.drive?.status;
         setRemoteMessage(drive === 'saved'
@@ -154,7 +154,7 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
           </div>
           <div className="form-group backup-section">
             <label>Резервная копия задач</label>
-            <p>Автокопии создаются на сервере каждый день, даже когда телефон и сайт закрыты. Для управления введите свой CRON_SECRET; код не сохраняется в браузере.</p>
+            <p>Ежедневные копии Vercel и Google Drive работают независимо, когда они настроены. Переключатель ниже управляет только Vercel; расписание Drive настраивается в Google Apps Script. Для управления Vercel введите CRON_SECRET; код не сохраняется в браузере.</p>
             <input className="styled-input w-100" type="password" autoComplete="off" placeholder="Код резервного копирования" aria-label="Код резервного копирования" value={backupSecret} onChange={event => { setBackupSecret(event.target.value); setRemoteStatus(null); }} />
             <div className="backup-actions">
               <button className="btn btn-secondary" disabled={!backupSecret.trim() || remoteBusy} onClick={() => manageRemoteBackup('status')}>Проверить подключение</button>
@@ -162,10 +162,10 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
             </div>
             {remoteStatus && <>
               <div className="toggle-group" style={{ padding: '12px 16px', background: 'var(--surface-light)', borderRadius: '12px', marginTop: '12px' }}>
-                <span>Ежедневные копии</span>
+                <span>Ежедневные копии Vercel</span>
                 <label className="switch"><input type="checkbox" checked={remoteStatus.dailyEnabled} disabled={remoteBusy} onChange={event => manageRemoteBackup('setDaily', event.target.checked)} /><span className="slider round"></span></label>
               </div>
-              <p>Vercel: {remoteStatus.lastVercelBackup ? new Date(remoteStatus.lastVercelBackup).toLocaleString('ru-RU') : 'копий пока нет'}. Google Drive: {remoteStatus.driveConfigured ? 'адрес скрипта задан; проверьте кнопкой' : 'требуется подключение'}.</p>
+              <p>Vercel: {remoteStatus.lastVercelBackup ? new Date(remoteStatus.lastVercelBackup).toLocaleString('ru-RU') : 'копий пока нет'}. Google Drive: {remoteStatus.driveConfigured ? 'ручной вызов подключён; ежедневный триггер проверьте в Google Apps Script' : 'ручной вызов не подключён; ежедневные копии Drive проверяйте в Google Apps Script'}.</p>
             </>}
             {remoteBusy && <p role="status">Создаём копию…</p>}
             {remoteMessage && <p role="status">{remoteMessage}</p>}

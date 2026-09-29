@@ -15,6 +15,8 @@ export async function GET(request) {
       return Response.json({ ok: true, skipped: 'daily_backups_disabled' });
     }
     const backup = await createTaskBackup({ daily: true });
+    // Keep the legacy trigger as a fallback until the independent Google trigger is installed.
+    // The script reads Firestore itself and deduplicates the daily Drive file.
     const drive = await sendBackupToDrive(backup.pathname);
     return Response.json({ ok: true, backup, drive });
   } catch (error) {
