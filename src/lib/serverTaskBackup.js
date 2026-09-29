@@ -3,14 +3,39 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { del, get, head, list, put } from '@vercel/blob';
 import { makeTaskBackup, parseTaskBackup } from './taskBackup';
 import { AUTOMATIC_BACKUP_PREFIX, backupName, planBackupCleanup } from './automaticBackup';
+import { validDriveWebAppUrl } from './driveWebAppUrl.mjs';
+export { validDriveWebAppUrl } from './driveWebAppUrl.mjs';
 
 export function backupConfigured() {
   return Boolean(process.env.CRON_SECRET && process.env.BLOB_READ_WRITE_TOKEN &&
     process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY);
 }
 
-export function driveConfigured() {
-  return /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(process.env.GOOGLE_BACKUP_WEBAPP_URL || '');
+const DRIVE_CONTROL_PATH = 'todo-interval/config/drive-webapp.json';
+
+export async function getDriveWebAppUrl() {
+  const file = await get(DRIVE_CONTROL_PATH, { access: 'private', useCache: false });
+  if (file) {
+    const config = JSON.parse(await new Response(file.stream).text());
+    if (validDriveWebAppUrl(config.webAppUrl)) return config.webAppUrl;
+  }
+  const fallback = process.env.GOOGLE_BACKUP_WEBAPP_URL || '';
+  return validDriveWebAppUrl(fallback) ? fallback : '';
+}
+
+export async function driveConfigured() {
+  return Boolean(await getDriveWebAppUrl());
+}
+
+export async function setDriveWebAppUrl(url) {
+  if (!validDriveWebAppUrl(url)) throw new Error('Invalid Google Apps Script Web app URL.');
+  const content = JSON.stringify({ webAppUrl: url, updatedAt: new Date().toISOString() });
+  const saved = await put(DRIVE_CONTROL_PATH, content, {
+    access: 'private', addRandomSuffix: false, allowOverwrite: true,
+    contentType: 'application/json',
+  });
+  const confirmed = await head(saved.url);
+  if (confirmed.size !== Buffer.byteLength(content, 'utf8')) throw new Error('Drive configuration could not be verified.');
 }
 
 function backupDb() {
@@ -115,12 +140,9 @@ export async function createTaskBackup({ daily = false } = {}) {
 }
 
 export async function sendBackupToDrive(pathname) {
-  const endpoint = process.env.GOOGLE_BACKUP_WEBAPP_URL;
-  if (!endpoint) return { status: 'not_configured' };
-  if (!driveConfigured()) {
-    return { status: 'invalid_configuration' };
-  }
   try {
+    const endpoint = await getDriveWebAppUrl();
+    if (!endpoint) return { status: 'not_configured' };
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

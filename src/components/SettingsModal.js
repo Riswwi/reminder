@@ -14,6 +14,7 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
   const [preview, setPreview] = useState(null);
   const [overwriteIds, setOverwriteIds] = useState([]);
   const [backupSecret, setBackupSecret] = useState('');
+  const [driveWebAppUrl, setDriveWebAppUrl] = useState('');
   const [remoteBusy, setRemoteBusy] = useState(false);
   const [remoteStatus, setRemoteStatus] = useState(null);
   const [remoteMessage, setRemoteMessage] = useState('');
@@ -44,13 +45,14 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
 
   const closeSettings = () => {
     setBackupSecret('');
+    setDriveWebAppUrl('');
     setRemoteStatus(null);
     setRemoteMessage('');
     onClose();
   };
 
   const manageRemoteBackup = async (action, enabled) => {
-    if (remoteBusy || (action === 'status' && !backupSecret.trim())) return;
+    if (remoteBusy || (action === 'status' && !backupSecret.trim()) || (action === 'setDriveUrl' && !driveWebAppUrl.trim())) return;
     sessionCheckRef.current?.abort();
     setRemoteBusy(true); setRemoteMessage('');
     try {
@@ -60,7 +62,7 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
           ...(action === 'status' ? { Authorization: `Bearer ${backupSecret.trim()}` } : {}),
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(action === 'status' ? { action: 'remember' } : action === 'run' ? { action: 'run' } : { action: 'setDaily', enabled }),
+        body: JSON.stringify(action === 'status' ? { action: 'remember' } : action === 'setDaily' ? { action, enabled } : action === 'setDriveUrl' ? { action, url: driveWebAppUrl.trim() } : { action }),
         credentials: 'same-origin',
         cache: 'no-store',
       });
@@ -76,11 +78,14 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
       } else if (action === 'setDaily') {
         setRemoteStatus(current => ({ ...current, dailyEnabled: enabled }));
         setRemoteMessage(enabled ? 'Ежедневные копии Vercel включены.' : 'Ежедневные копии Vercel выключены. Google Drive управляется отдельно.');
-      } else {
-        const drive = result.drive?.status;
-        setRemoteMessage(drive === 'saved'
-          ? `Копия ${result.backup.tasks ?? ''} задач сохранена в Vercel и Google Drive.`
-          : `Копия сохранена в Vercel. ${drive === 'not_configured' ? 'Ручной запуск Drive не настроен; ежедневный скрипт работает отдельно.' : 'Ручной запуск Drive не удался; проверьте его отдельно.'}`);
+      } else if (action === 'runDrive') {
+        setRemoteMessage('Новая копия создана в Google Drive. Проверьте файл в папке To-Do Interval Backups.');
+      } else if (action === 'setDriveUrl') {
+        setRemoteStatus(current => ({ ...current, driveConfigured: true }));
+        setDriveWebAppUrl('');
+        setRemoteMessage('Адрес Google-скрипта сохранён. Теперь можно запустить копию Drive кнопкой выше.');
+      } else if (action === 'runVercel') {
+        setRemoteMessage(`Копия ${result.backup.tasks ?? ''} задач сохранена в Vercel.`);
         setRemoteStatus(current => current && ({ ...current, lastVercelBackup: new Date().toISOString() }));
       }
     } catch (error) { setRemoteMessage(`Ошибка: ${error.message}`); }
@@ -211,14 +216,20 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
             </div>}
             {remoteStatus && <>
               <div className="backup-actions">
-                <button className="btn btn-primary" disabled={remoteBusy} onClick={() => manageRemoteBackup('run')}>Создать копию сейчас</button>
+                <button className="btn btn-primary" disabled={remoteBusy} onClick={() => manageRemoteBackup('runVercel')}>Копия в Vercel</button>
+                <button className="btn btn-secondary" disabled={remoteBusy || !remoteStatus.driveConfigured} onClick={() => manageRemoteBackup('runDrive')}>Копия в Google Drive</button>
                 <button className="btn btn-secondary" disabled={remoteBusy} onClick={forgetRemoteBackupAccess}>Забыть доступ</button>
+              </div>
+              <p>Для кнопки Drive: в Google Apps Script выберите «Развернуть → Новое развертывание → Веб-приложение», скопируйте адрес с окончанием /exec и вставьте его здесь. BACKUP_TOKEN в свойствах скрипта должен совпадать с вашим CRON_SECRET.</p>
+              <div className="backup-actions">
+                <input className="styled-input" type="url" inputMode="url" placeholder="Адрес Google-скрипта /exec" aria-label="Адрес Google Apps Script Web app" value={driveWebAppUrl} onChange={event => setDriveWebAppUrl(event.target.value)} />
+                <button className="btn btn-secondary" disabled={remoteBusy || !driveWebAppUrl.trim()} onClick={() => manageRemoteBackup('setDriveUrl')}>Сохранить адрес Drive</button>
               </div>
               <div className="toggle-group" style={{ padding: '12px 16px', background: 'var(--surface-light)', borderRadius: '12px', marginTop: '12px' }}>
                 <span>Ежедневные копии Vercel</span>
                 <label className="switch"><input type="checkbox" checked={remoteStatus.dailyEnabled} disabled={remoteBusy} onChange={event => manageRemoteBackup('setDaily', event.target.checked)} /><span className="slider round"></span></label>
               </div>
-              <p>Vercel: {remoteStatus.lastVercelBackup ? new Date(remoteStatus.lastVercelBackup).toLocaleString('ru-RU') : 'копий пока нет'}. Google Drive: копирование настроено отдельно, сайт не может проверить его состояние. {remoteStatus.driveConfigured ? 'Ручной запуск из сайта подключён.' : 'Кнопка выше создаёт копию только в Vercel.'} Дату Drive-копии смотрите в Google Drive.</p>
+              <p>Vercel: {remoteStatus.lastVercelBackup ? new Date(remoteStatus.lastVercelBackup).toLocaleString('ru-RU') : 'копий пока нет'}. Google Drive: ежедневный запуск настроен отдельно, сайт не может проверить его файлы. {remoteStatus.driveConfigured ? 'Ручной запуск подключён.' : 'Для ручной кнопки сохраните адрес скрипта выше.'}</p>
             </>}
             {remoteBusy && <p role="status">Подождите…</p>}
             {remoteMessage && <p role="status">{remoteMessage}</p>}

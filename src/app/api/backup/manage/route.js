@@ -1,6 +1,6 @@
 import {
   backupConfigured, createTaskBackup, driveConfigured, getDailyEnabled, listAutomaticBackups,
-  sendBackupToDrive, setDailyEnabled,
+  sendBackupToDrive, setDailyEnabled, setDriveWebAppUrl, validDriveWebAppUrl,
 } from '../../../../lib/serverTaskBackup';
 import {
   createBackupWebSession, matchesBackupSecret, verifyBackupWebSession,
@@ -68,10 +68,10 @@ function authorize(request) {
 }
 
 async function status() {
-  const [dailyEnabled, backups] = await Promise.all([getDailyEnabled(), listAutomaticBackups()]);
+  const [dailyEnabled, backups, driveReady] = await Promise.all([getDailyEnabled(), listAutomaticBackups(), driveConfigured()]);
   return {
     dailyEnabled,
-    driveConfigured: driveConfigured(),
+    driveConfigured: driveReady,
     lastVercelBackup: backups[0]?.uploadedAt || null,
     backupCount: backups.length,
   };
@@ -124,6 +124,28 @@ export async function POST(request) {
     if (input.action === 'setDaily' && typeof input.enabled === 'boolean') {
       await setDailyEnabled(input.enabled);
       return respond(request, { ok: true, dailyEnabled: input.enabled });
+    }
+    if (input.action === 'setDriveUrl') {
+      if (!validDriveWebAppUrl(input.url)) {
+        return respond(request, { error: 'Нужен адрес Google Apps Script Web app, оканчивающийся на /exec.' }, 400);
+      }
+      await setDriveWebAppUrl(input.url);
+      return respond(request, { ok: true, driveConfigured: true });
+    }
+    if (input.action === 'runDrive') {
+      if (!(await driveConfigured())) {
+        return respond(request, { error: 'Ручной запуск Google Drive ещё не настроен. Вставьте адрес Web app скрипта в настройках.' }, 503);
+      }
+      const timestamp = new Date().toISOString().slice(0, 23).replace(/[:.]/g, '-');
+      const drive = await sendBackupToDrive(`todo-interval/automatic/${timestamp}.json`);
+      if (drive.status !== 'saved') {
+        return respond(request, { error: 'Google Drive не подтвердил создание копии. Проверьте BACKUP_TOKEN и журнал запусков скрипта.' }, 502);
+      }
+      return respond(request, { ok: true, drive });
+    }
+    if (input.action === 'runVercel') {
+      const backup = await createTaskBackup();
+      return respond(request, { ok: true, backup });
     }
     if (input.action === 'run') {
       const backup = await createTaskBackup();
