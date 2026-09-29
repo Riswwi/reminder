@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { STORE_OPTIONS, priceExportText, priceLabel } from '@/lib/priceExport';
 
 const initialData = [
   { name: "Kurczak (filet z piersi)", stores: [{ brand: "biedronka/lidl", price: 14.99, unit: "zł/kg" }, { brand: "intermash", price: 13.99, unit: "zł/kg" }] },
@@ -65,7 +66,10 @@ export default function PricesPage() {
   const [editingItem, setEditingItem] = useState(null); // { iIdx, sIdx? }
   
   const [newName, setNewName] = useState('');
-  const [newBrand, setNewBrand] = useState('');
+  const [newShopChoice, setNewShopChoice] = useState('');
+  const [newCustomShop, setNewCustomShop] = useState('');
+  const [newPromotion, setNewPromotion] = useState('');
+  const [legacyBrand, setLegacyBrand] = useState('');
   const [newPrice, setNewPrice] = useState('');
   const [newUnit, setNewUnit] = useState('zł/kg');
 
@@ -112,7 +116,7 @@ export default function PricesPage() {
     setModalMode('new_product');
     setEditingItem(null);
     setNewName('');
-    setNewBrand('');
+    setNewShopChoice(''); setNewCustomShop(''); setNewPromotion(''); setLegacyBrand('');
     setNewPrice('');
     setNewUnit('zł/kg');
     setIsModalOpen(true);
@@ -122,7 +126,7 @@ export default function PricesPage() {
     setModalMode('new_store');
     setEditingItem({ iIdx });
     setNewName(data[iIdx].name);
-    setNewBrand('');
+    setNewShopChoice(''); setNewCustomShop(''); setNewPromotion(''); setLegacyBrand('');
     setNewPrice('');
     setNewUnit('zł/kg');
     setIsModalOpen(true);
@@ -133,7 +137,11 @@ export default function PricesPage() {
     setModalMode('edit_store');
     setEditingItem({ iIdx, sIdx });
     setNewName(data[iIdx].name);
-    setNewBrand(store.brand);
+    const shop = store.shop || '';
+    setNewShopChoice(STORE_OPTIONS.includes(shop) ? shop : shop ? '__custom' : '');
+    setNewCustomShop(STORE_OPTIONS.includes(shop) ? '' : shop);
+    setNewPromotion(store.promotion || '');
+    setLegacyBrand(!store.shop && !store.promotion && store.brand !== '-' ? store.brand || '' : '');
     setNewPrice(store.price);
     setNewUnit(store.unit);
     setIsModalOpen(true);
@@ -141,10 +149,14 @@ export default function PricesPage() {
 
   const handleSave = () => {
     if (!newName.trim()) return alert('Введите название продукта!');
+    const shop = (newShopChoice === '__custom' ? newCustomShop : newShopChoice).trim();
+    if (newShopChoice === '__custom' && !shop) return alert('Введите название магазина!');
     const newData = [...data];
     
     const storeObj = {
-      brand: newBrand.trim(),
+      brand: shop || newPromotion.trim() ? [shop, newPromotion.trim()].filter(Boolean).join(' ') : legacyBrand || '-',
+      shop,
+      promotion: newPromotion.trim(),
       price: parseFloat(newPrice) || 0,
       unit: newUnit
     };
@@ -200,13 +212,25 @@ export default function PricesPage() {
   const filteredItems = data.map((item, iIdx) => ({ ...item, originalIndex: iIdx }))
     .filter(item => 
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      item.stores.some(s => s.brand.toLowerCase().includes(searchQuery.toLowerCase()))
+      item.stores.some(s => priceLabel(s).toLowerCase().includes(searchQuery.toLowerCase()))
     );
+
+  const exportPrices = () => {
+    const file = new Blob([priceExportText(data)], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(file);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `moi-ceny-${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
 
   return (
     <div className="tasks-page">
-      <div className="tasks-toolbar" style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '0 8px', marginTop: '16px' }}>
-        <div style={{ display: 'flex', flex: 1, position: 'relative' }}>
+      <div className="tasks-toolbar" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', padding: '0 8px', marginTop: '16px' }}>
+        <div style={{ display: 'flex', flex: '1 1 240px', position: 'relative' }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" 
                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'var(--text-muted)' }}>
             <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -234,6 +258,7 @@ export default function PricesPage() {
         >
           + Добавить
         </button>
+        <button className="btn btn-secondary" onClick={exportPrices} title="Скачать все цены в текстовом виде для ChatGPT" style={{ flexShrink: 0 }}>Экспорт для ChatGPT</button>
       </div>
 
       <div className="tasks-body" style={{ padding: '0 8px', gap: '12px', display: 'flex', flexDirection: 'column' }}>
@@ -285,14 +310,14 @@ export default function PricesPage() {
                     <span style={{ 
                       fontSize: '13px', 
                       fontWeight: '600',
-                      color: store.brand && store.brand !== '-' ? '#FF9F0A' : 'var(--text-muted)', 
-                      background: store.brand && store.brand !== '-' ? 'rgba(255, 159, 10, 0.15)' : 'transparent',
-                      padding: store.brand && store.brand !== '-' ? '4px 8px' : '0',
+                      color: priceLabel(store) !== '—' ? '#FF9F0A' : 'var(--text-muted)',
+                      background: priceLabel(store) !== '—' ? 'rgba(255, 159, 10, 0.15)' : 'transparent',
+                      padding: priceLabel(store) !== '—' ? '4px 8px' : '0',
                       borderRadius: '6px',
                       wordBreak: 'break-word',
-                      border: store.brand && store.brand !== '-' ? '1px solid rgba(255, 159, 10, 0.3)' : 'none'
+                      border: priceLabel(store) !== '—' ? '1px solid rgba(255, 159, 10, 0.3)' : 'none'
                     }}>
-                      {store.brand || '-'}
+                      {priceLabel(store)}
                     </span>
                   </div>
                   <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>
@@ -341,8 +366,18 @@ export default function PricesPage() {
               <input type="text" className="styled-input w-100" placeholder="Например: Kurczak" value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={handleKeyDown} />
             </div>
             <div className="form-group">
-              <label>Магазин / Бренд / Акция</label>
-              <input type="text" className="styled-input w-100" placeholder="Например: biedronka 2+1" value={newBrand} onChange={e => setNewBrand(e.target.value)} onKeyDown={handleKeyDown} />
+              <label>Магазин</label>
+              <select className="styled-input w-100" value={newShopChoice} onChange={e => setNewShopChoice(e.target.value)}>
+                <option value="">Не указан</option>
+                {STORE_OPTIONS.map(shop => <option key={shop} value={shop}>{shop}</option>)}
+                <option value="__custom">Свой магазин…</option>
+              </select>
+              {newShopChoice === '__custom' && <input type="text" className="styled-input w-100" style={{ marginTop: 8 }} placeholder="Название магазина" value={newCustomShop} onChange={e => setNewCustomShop(e.target.value)} onKeyDown={handleKeyDown} />}
+            </div>
+            <div className="form-group">
+              <label>Название акции</label>
+              <input type="text" className="styled-input w-100" placeholder="Например: 2+1 или скидка 20%" value={newPromotion} onChange={e => setNewPromotion(e.target.value)} onKeyDown={handleKeyDown} />
+              {legacyBrand && !newShopChoice && !newPromotion && <small style={{ color: 'var(--text-muted)' }}>Старая запись «{legacyBrand}» сохранится, пока вы не выберете магазин или акцию.</small>}
             </div>
             <div className="form-group" style={{ display: 'flex', gap: '8px' }}>
               <div style={{ flex: 1 }}>
