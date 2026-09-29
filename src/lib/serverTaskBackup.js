@@ -62,7 +62,7 @@ export async function setDriveWebAppUrl(url) {
   if (confirmed.size !== Buffer.byteLength(content, 'utf8')) throw new Error('Drive configuration could not be verified.');
 }
 
-export function backupAdminApp() {
+function backupDb() {
   const name = 'automatic-task-backup';
   const existing = getApps().find(app => app.name === name);
   const app = existing || initializeApp({
@@ -72,10 +72,8 @@ export function backupAdminApp() {
       privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
     }),
   }, name);
-  return app;
+  return getFirestore(app);
 }
-
-function backupDb() { return getFirestore(backupAdminApp()); }
 
 const BACKUP_CONTROL_PATH = 'todo-interval/config/backup-mode.json';
 

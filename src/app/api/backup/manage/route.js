@@ -6,7 +6,6 @@ import {
 import {
   createBackupWebSession, matchesBackupSecret, verifyBackupWebSession,
 } from '../../../../lib/backupWebSession.mjs';
-import { getBackupGoogleOwner, setBackupGoogleOwner, verifiedGoogleUser } from '../../../../lib/backupGoogleOwner';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -62,16 +61,9 @@ export function OPTIONS(request) {
   });
 }
 
-async function authorize(request) {
+function authorize(request) {
   if (!backupConfigured()) return null;
-  const authorization = request.headers.get('authorization') || '';
-  if (matchesBackupSecret(authorization, process.env.CRON_SECRET)) return 'bearer';
-  const match = /^Firebase\s+(.+)$/i.exec(authorization);
-  if (match) {
-    const [user, owner] = await Promise.all([verifiedGoogleUser(match[1]), getBackupGoogleOwner()]);
-    if (user && owner?.uid === user.uid) return 'google';
-    return null;
-  }
+  if (matchesBackupSecret(request.headers.get('authorization'), process.env.CRON_SECRET)) return 'bearer';
   if (verifyBackupWebSession(readSessionCookie(request), process.env.CRON_SECRET)) return 'cookie';
   return null;
 }
@@ -91,7 +83,7 @@ async function status() {
 
 export async function GET(request) {
   if (!backupConfigured()) return respond(request, { error: 'Резервное копирование ещё не настроено в Vercel.' }, 503);
-  const auth = await authorize(request);
+  const auth = authorize(request);
   if (!auth) return respond(request, { error: 'Неверный код резервного копирования.' }, 401);
   try {
     return respond(request, await status(), 200,
@@ -106,7 +98,7 @@ export async function POST(request) {
   let input;
   try {
     const text = await request.text();
-    if (text.length > 8192) return respond(request, { error: 'Некорректный запрос.' }, 413);
+    if (text.length > 1024) return respond(request, { error: 'Некорректный запрос.' }, 413);
     input = JSON.parse(text);
   } catch { return respond(request, { error: 'Некорректный запрос.' }, 400); }
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
@@ -116,21 +108,7 @@ export async function POST(request) {
     return respond(request, { ok: true }, 200, sessionCookie(request, '', true));
   }
   if (!backupConfigured()) return respond(request, { error: 'Резервное копирование ещё не настроено в Vercel.' }, 503);
-  if (input.action === 'linkGoogle') {
-    if (!sameOrigin(request) || !matchesBackupSecret(request.headers.get('authorization'), process.env.CRON_SECRET)) {
-      return respond(request, { error: 'Для первого подключения Google нужен действующий ключ копирования.' }, 401);
-    }
-    const user = await verifiedGoogleUser(input.idToken);
-    if (!user) return respond(request, { error: 'Не удалось подтвердить Google-аккаунт. Проверьте вход через Google.' }, 401);
-    try {
-      await setBackupGoogleOwner(user);
-      return respond(request, { ...(await status()), ownerEmail: user.email });
-    } catch (error) {
-      console.error('Backup Google linking failed:', error);
-      return respond(request, { error: 'Не удалось сохранить подключение Google.' }, 500);
-    }
-  }
-  const auth = await authorize(request);
+  const auth = authorize(request);
   if (input?.action === 'remember') {
     if (!sameOrigin(request) || auth !== 'bearer') {
       return respond(request, { error: 'Неверный код резервного копирования.' }, 401);
