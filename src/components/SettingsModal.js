@@ -13,6 +13,49 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
   const [backupMessage, setBackupMessage] = useState('');
   const [preview, setPreview] = useState(null);
   const [overwriteIds, setOverwriteIds] = useState([]);
+  const [backupSecret, setBackupSecret] = useState('');
+  const [remoteBusy, setRemoteBusy] = useState(false);
+  const [remoteStatus, setRemoteStatus] = useState(null);
+  const [remoteMessage, setRemoteMessage] = useState('');
+
+  const closeSettings = () => {
+    setBackupSecret('');
+    setRemoteStatus(null);
+    setRemoteMessage('');
+    onClose();
+  };
+
+  const manageRemoteBackup = async (action, enabled) => {
+    if (!backupSecret.trim() || remoteBusy) return;
+    setRemoteBusy(true); setRemoteMessage('');
+    try {
+      const response = await fetch('/api/backup/manage', {
+        method: action === 'status' ? 'GET' : 'POST',
+        headers: {
+          Authorization: `Bearer ${backupSecret.trim()}`,
+          ...(action === 'status' ? {} : { 'Content-Type': 'application/json' }),
+        },
+        ...(action === 'status' ? {} : { body: JSON.stringify(action === 'run' ? { action: 'run' } : { action: 'setDaily', enabled }) }),
+        cache: 'no-store',
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Сервер не ответил.');
+      if (action === 'status') {
+        setRemoteStatus(result);
+        setRemoteMessage('Подключение проверено.');
+      } else if (action === 'setDaily') {
+        setRemoteStatus(current => ({ ...current, dailyEnabled: enabled }));
+        setRemoteMessage(enabled ? 'Ежедневные копии включены.' : 'Ежедневные копии выключены. Ручное сохранение доступно.');
+      } else {
+        const drive = result.drive?.status;
+        setRemoteMessage(drive === 'saved'
+          ? `Копия ${result.backup.tasks ?? ''} задач сохранена в Vercel и Google Drive.`
+          : `Копия сохранена в Vercel. Google Drive: ${drive === 'not_configured' ? 'ещё не подключён' : 'сохранить не удалось'}.`);
+        setRemoteStatus(current => current && ({ ...current, lastVercelBackup: new Date().toISOString() }));
+      }
+    } catch (error) { setRemoteMessage(`Ошибка: ${error.message}`); }
+    finally { setRemoteBusy(false); }
+  };
 
   const readCloudTasks = async () => {
     const snapshot = await getDocsFromServer(collection(db, 'tasks'));
@@ -82,7 +125,7 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
   if (!isOpen) return null;
 
   return (
-    <div className={`modal-overlay ${isOpen ? '' : 'hidden'}`} onClick={onClose}>
+    <div className={`modal-overlay ${isOpen ? '' : 'hidden'}`} onClick={closeSettings}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <h2>Настройки</h2>
         <div className="settings-scroll-area">
@@ -111,7 +154,22 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
           </div>
           <div className="form-group backup-section">
             <label>Резервная копия задач</label>
-            <p>Файл JSON содержит все задачи из облака. Сохраните его также на ПК или другом облачном диске.</p>
+            <p>Автокопии создаются на сервере каждый день, даже когда телефон и сайт закрыты. Для управления введите свой CRON_SECRET; код не сохраняется в браузере.</p>
+            <input className="styled-input w-100" type="password" autoComplete="off" placeholder="Код резервного копирования" aria-label="Код резервного копирования" value={backupSecret} onChange={event => { setBackupSecret(event.target.value); setRemoteStatus(null); }} />
+            <div className="backup-actions">
+              <button className="btn btn-secondary" disabled={!backupSecret.trim() || remoteBusy} onClick={() => manageRemoteBackup('status')}>Проверить подключение</button>
+              <button className="btn btn-primary" disabled={!remoteStatus || remoteBusy} onClick={() => manageRemoteBackup('run')}>Создать копию сейчас</button>
+            </div>
+            {remoteStatus && <>
+              <div className="toggle-group" style={{ padding: '12px 16px', background: 'var(--surface-light)', borderRadius: '12px', marginTop: '12px' }}>
+                <span>Ежедневные копии</span>
+                <label className="switch"><input type="checkbox" checked={remoteStatus.dailyEnabled} disabled={remoteBusy} onChange={event => manageRemoteBackup('setDaily', event.target.checked)} /><span className="slider round"></span></label>
+              </div>
+              <p>Vercel: {remoteStatus.lastVercelBackup ? new Date(remoteStatus.lastVercelBackup).toLocaleString('ru-RU') : 'копий пока нет'}. Google Drive: {remoteStatus.driveConfigured ? 'адрес скрипта задан; проверьте кнопкой' : 'требуется подключение'}.</p>
+            </>}
+            {remoteBusy && <p role="status">Создаём копию…</p>}
+            {remoteMessage && <p role="status">{remoteMessage}</p>}
+            <p>Отдельно можно скачать JSON-файл со всеми задачами и восстановить их вручную. Храните файл вне телефона.</p>
             <div className="backup-actions">
               <button className="btn btn-secondary" disabled={backupBusy} onClick={exportTasks}>Скачать все задачи</button>
               <button className="btn btn-secondary" disabled={backupBusy} onClick={() => fileRef.current?.click()}>Восстановить из файла</button>
@@ -139,7 +197,7 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
         </div>
 
         <div className="modal-actions">
-          <button className="btn btn-secondary" onClick={onClose}>Закрыть</button>
+          <button className="btn btn-secondary" onClick={closeSettings}>Закрыть</button>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
-// Paste this file into a private standalone project at script.google.com.
-// In Project Settings -> Script properties, set BACKUP_TOKEN to the same
-// CRON_SECRET configured for the Vercel project. Never paste the token in code.
+// Paste this file into your private standalone script.google.com project.
+// Set BACKUP_TOKEN in Script properties to the same CRON_SECRET as Vercel.
+// Deploy as a Web app: Execute as me, Who has access: Anyone.
+// The public endpoint requires the secret in the POST body; never put it in the URL or code.
 
 const BACKUP_SOURCE = 'https://reminder-amber-theta.vercel.app/api/backup/latest';
 const BACKUP_FOLDER_NAME = 'To-Do Interval Backups';
@@ -9,23 +10,42 @@ const MAX_BACKUPS = 30;
 const MAX_BACKUP_BYTES = 200 * 1024 * 1024;
 
 function installDailyBackup() {
-  const token = PropertiesService.getScriptProperties().getProperty('BACKUP_TOKEN');
-  if (!token || token.length < 16) throw new Error('Set BACKUP_TOKEN in Script properties first.');
-  if (!ScriptApp.getProjectTriggers().some(trigger => trigger.getHandlerFunction() === 'backupToDrive')) {
-    ScriptApp.newTrigger('backupToDrive')
-      .timeBased().everyDays(1).atHour(7).inTimezone('Europe/Warsaw').create();
-  }
-  console.log('The daily Google Drive backup trigger is installed.');
+  throw new Error('Daily backups are now controlled by the Vercel cron. Deploy this script as a Web app instead.');
 }
 
-function backupToDrive() {
+function removeLegacyDailyBackupTrigger() {
+  ScriptApp.getProjectTriggers()
+    .filter(trigger => trigger.getHandlerFunction() === 'backupToDrive')
+    .forEach(trigger => ScriptApp.deleteTrigger(trigger));
+}
+
+function doPost(e) {
+  try {
+    const input = JSON.parse(e.postData.contents);
+    const token = PropertiesService.getScriptProperties().getProperty('BACKUP_TOKEN');
+    if (!token || token.length < 32 || input.token !== token ||
+        !/^todo-interval\/automatic\/\d{4}-\d{2}-\d{2}(?:T\d{2}-\d{2}-\d{2}-\d{3})?\.json$/.test(input.pathname || '')) {
+      throw new Error('Unauthorized backup request.');
+    }
+    const result = backupToDrive(input.pathname);
+    return ContentService.createTextOutput(JSON.stringify({ ok: true, ...result }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    console.error('Backup request failed:', error);
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Google Drive backup failed.' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function backupToDrive(pathname) {
   const lock = LockService.getScriptLock();
-  if (!lock.tryLock(30000)) return;
+  if (!lock.tryLock(30000)) throw new Error('Another Google Drive backup is still running.');
   try {
     const props = PropertiesService.getScriptProperties();
     const token = props.getProperty('BACKUP_TOKEN');
-    if (!token || token.length < 16) throw new Error('BACKUP_TOKEN is not configured.');
-    const response = UrlFetchApp.fetch(BACKUP_SOURCE, {
+    if (!token || token.length < 32) throw new Error('BACKUP_TOKEN is not configured.');
+    const source = pathname ? BACKUP_SOURCE + '?pathname=' + encodeURIComponent(pathname) : BACKUP_SOURCE;
+    const response = UrlFetchApp.fetch(source, {
       method: 'get',
       headers: { Authorization: 'Bearer ' + token },
       followRedirects: false,
@@ -41,11 +61,12 @@ function backupToDrive() {
         !/^\d{4}-\d{2}-\d{2}T/.test(backup.exportedAt || '')) {
       throw new Error('The downloaded task backup is invalid or empty.');
     }
-    const date = backup.exportedAt.slice(0, 10);
-    if (date !== Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM-dd')) {
+    const ageMs = Date.now() - new Date(backup.exportedAt).getTime();
+    if (!Number.isFinite(ageMs) || ageMs < -300000 || ageMs > 2 * 60 * 60 * 1000) {
       throw new Error('Vercel backup is stale; Google Drive copy was not marked successful.');
     }
-    const name = 'todo-interval-' + date + '.json';
+    const date = backup.exportedAt.slice(0, 10);
+    const name = 'todo-interval-' + backup.exportedAt.slice(0, 23).replace(/[:.]/g, '-') + '.json';
     const blob = Utilities.newBlob(content, 'application/json', name);
     const expectedBytes = blob.getBytes().length;
     if (expectedBytes > 20 * 1024 * 1024) throw new Error('Backup is larger than 20 MB.');
@@ -56,7 +77,7 @@ function backupToDrive() {
       if (existing.getDescription() === BACKUP_MARKER && existing.getSize() === expectedBytes) {
         const removed = pruneDriveBackups_(folder);
         console.log('Google Drive already has this date: ' + date + '; older copies removed: ' + removed);
-        return;
+        return { date, tasks: backup.tasks.length, alreadySaved: true };
       }
     }
     const saved = folder.createFile(blob);
@@ -66,6 +87,7 @@ function backupToDrive() {
     }
     const removed = pruneDriveBackups_(folder);
     console.log('Saved ' + backup.tasks.length + ' tasks to Google Drive; older copies removed: ' + removed);
+    return { date, tasks: backup.tasks.length, removed };
   } finally {
     lock.releaseLock();
   }
@@ -84,7 +106,7 @@ function pruneDriveBackups_(folder) {
   const iterator = folder.getFiles();
   while (iterator.hasNext()) {
     const file = iterator.next();
-    if (file.getDescription() === BACKUP_MARKER && /^todo-interval-\d{4}-\d{2}-\d{2}\.json$/.test(file.getName())) {
+    if (file.getDescription() === BACKUP_MARKER && /^todo-interval-\d{4}-\d{2}-\d{2}(?:T\d{2}-\d{2}-\d{2}-\d{3})?\.json$/.test(file.getName())) {
       files.push(file);
     }
   }

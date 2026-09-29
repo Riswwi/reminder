@@ -1,5 +1,6 @@
-import { get, list } from '@vercel/blob';
-import { AUTOMATIC_BACKUP_PREFIX } from '../../../../lib/automaticBackup';
+import { get } from '@vercel/blob';
+import { backupName } from '../../../../lib/automaticBackup';
+import { listAutomaticBackups } from '../../../../lib/serverTaskBackup';
 import { parseTaskBackup } from '../../../../lib/taskBackup';
 
 export const runtime = 'nodejs';
@@ -13,19 +14,14 @@ export async function GET(request) {
   }
 
   try {
-    let cursor;
-    let latest = null;
-    do {
-      const page = await list({ prefix: AUTOMATIC_BACKUP_PREFIX, limit: 1000, cursor });
-      for (const blob of page.blobs) {
-        if (/^todo-interval\/automatic\/\d{4}-\d{2}-\d{2}\.json$/.test(blob.pathname) &&
-            (!latest || blob.pathname > latest.pathname)) latest = blob;
-      }
-      cursor = page.hasMore ? page.cursor : undefined;
-      if (page.hasMore && !cursor) throw new Error('Backup listing did not return a cursor.');
-    } while (cursor);
-    if (!latest) return Response.json({ error: 'No automatic backup exists yet.' }, { status: 404 });
-    const file = await get(latest.url, { access: 'private', useCache: false });
+    const requested = new URL(request.url).searchParams.get('pathname');
+    if (requested && !backupName.test(requested)) {
+      return Response.json({ error: 'Invalid backup name.' }, { status: 400 });
+    }
+    const backups = await listAutomaticBackups();
+    const target = requested ? backups.find(blob => blob.pathname === requested) : backups[0];
+    if (!target) return Response.json({ error: 'Backup not found.' }, { status: 404 });
+    const file = await get(target.url, { access: 'private', useCache: false });
     if (!file?.stream || (file.blob.size || 0) > 20 * 1024 * 1024) {
       throw new Error('Latest backup is unavailable or too large.');
     }
@@ -34,7 +30,7 @@ export async function GET(request) {
     return new Response(content, {
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${latest.pathname.split('/').pop()}"`,
+        'Content-Disposition': `attachment; filename="${target.pathname.split('/').pop()}"`,
         'Cache-Control': 'private, no-store',
       },
     });
