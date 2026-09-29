@@ -13,6 +13,30 @@ export function backupConfigured() {
 
 const DRIVE_CONTROL_PATH = 'todo-interval/config/drive-webapp.json';
 
+const DRIVE_LAST_SUCCESS_PATH = 'todo-interval/config/drive-last-success.json';
+
+export async function getLastDriveBackup() {
+  const file = await get(DRIVE_LAST_SUCCESS_PATH, { access: 'private', useCache: false });
+  if (!file) return null;
+  const record = JSON.parse(await new Response(file.stream).text());
+  return typeof record.savedAt === 'string' && Number.isFinite(Date.parse(record.savedAt))
+    ? record.savedAt : null;
+}
+
+export async function recordDriveBackupSuccess() {
+  const savedAt = new Date().toISOString();
+  const content = JSON.stringify({ savedAt });
+  const saved = await put(DRIVE_LAST_SUCCESS_PATH, content, {
+    access: 'private', addRandomSuffix: false, allowOverwrite: true,
+    contentType: 'application/json',
+  });
+  const confirmed = await head(saved.url);
+  if (confirmed.size !== Buffer.byteLength(content, 'utf8')) {
+    throw new Error('Drive backup timestamp could not be verified.');
+  }
+  return savedAt;
+}
+
 export async function getDriveWebAppUrl() {
   const file = await get(DRIVE_CONTROL_PATH, { access: 'private', useCache: false });
   if (file) {

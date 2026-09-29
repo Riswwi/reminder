@@ -1,6 +1,7 @@
 import {
-  backupConfigured, createTaskBackup, driveConfigured, getDailyEnabled, listAutomaticBackups,
-  sendBackupToDrive, setDailyEnabled, setDriveWebAppUrl, validDriveWebAppUrl,
+  backupConfigured, createTaskBackup, driveConfigured, getDailyEnabled, getLastDriveBackup,
+  listAutomaticBackups, recordDriveBackupSuccess, sendBackupToDrive, setDailyEnabled,
+  setDriveWebAppUrl, validDriveWebAppUrl,
 } from '../../../../lib/serverTaskBackup';
 import {
   createBackupWebSession, matchesBackupSecret, verifyBackupWebSession,
@@ -68,11 +69,14 @@ function authorize(request) {
 }
 
 async function status() {
-  const [dailyEnabled, backups, driveReady] = await Promise.all([getDailyEnabled(), listAutomaticBackups(), driveConfigured()]);
+  const [dailyEnabled, backups, driveReady, lastDriveBackup] = await Promise.all([
+    getDailyEnabled(), listAutomaticBackups(), driveConfigured(), getLastDriveBackup(),
+  ]);
   return {
     dailyEnabled,
     driveConfigured: driveReady,
     lastVercelBackup: backups[0]?.uploadedAt || null,
+    lastDriveBackup,
     backupCount: backups.length,
   };
 }
@@ -141,7 +145,13 @@ export async function POST(request) {
       if (drive.status !== 'saved') {
         return respond(request, { error: 'Google Drive не подтвердил создание копии. Проверьте BACKUP_TOKEN и журнал запусков скрипта.' }, 502);
       }
-      return respond(request, { ok: true, drive });
+      try {
+        const lastDriveBackup = await recordDriveBackupSuccess();
+        return respond(request, { ok: true, drive, lastDriveBackup });
+      } catch (error) {
+        console.error('Drive backup succeeded but timestamp was not saved:', error);
+        return respond(request, { ok: true, drive, warning: 'Копия в Drive создана, но время последней копии на сайте не обновилось.' });
+      }
     }
     if (input.action === 'runVercel') {
       const backup = await createTaskBackup();
@@ -150,7 +160,12 @@ export async function POST(request) {
     if (input.action === 'run') {
       const backup = await createTaskBackup();
       const drive = await sendBackupToDrive(backup.pathname);
-      return respond(request, { ok: true, backup, drive });
+      let lastDriveBackup = null;
+      if (drive.status === 'saved') {
+        try { lastDriveBackup = await recordDriveBackupSuccess(); }
+        catch (error) { console.error('Drive backup succeeded but timestamp was not saved:', error); }
+      }
+      return respond(request, { ok: true, backup, drive, lastDriveBackup });
     }
     return respond(request, { error: 'Неизвестная команда.' }, 400);
   } catch (error) {

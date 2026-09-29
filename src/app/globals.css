@@ -597,6 +597,84 @@ input:checked + .slider:before { transform: translateX(22px); }
 .backup-preview { margin-top: 14px; padding: 14px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-light); }
 .backup-conflicts { max-height: 170px; overflow-y: auto; }
 .backup-conflicts label { display: flex; align-items: center; gap: 9px; margin: 8px 0; color: var(--text-color); overflow-wrap: anywhere; }
+.settings-overlay {
+  position: fixed; inset: 0; align-items: center; justify-content: center;
+  padding: 12px;
+}
+.settings-modal.modal-content {
+  width: min(760px, 100%);
+  height: min(740px, calc(100dvh - 24px));
+  max-height: calc(100dvh - 24px);
+  margin: auto; padding: 20px 22px 18px;
+  border-radius: 22px; overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+.settings-modal h2 { flex: none; margin-bottom: 12px; }
+.settings-modal .settings-scroll-area {
+  min-height: 0; flex: 1 1 auto; overflow-y: auto;
+  overscroll-behavior: contain; padding: 0 4px 8px 0;
+}
+.settings-modal .modal-actions { flex: none; margin-top: 12px; }
+.backup-section { margin-top: 0; padding-top: 0; border-top: 0; }
+.backup-section h3 { font-size: 17px; margin-bottom: 10px; }
+.backup-access-row, .backup-provider-heading, .backup-daily-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.backup-access-row { margin-bottom: 12px; }
+.backup-pill {
+  display: inline-flex; align-items: center; width: fit-content;
+  padding: 5px 10px; border-radius: 999px;
+  color: var(--text-secondary); background: var(--surface-light);
+  font-size: 12px; font-weight: 600; line-height: 1.3;
+}
+.backup-pill.is-ready {
+  color: #bbb2ff; background: rgba(124,111,224,0.17);
+}
+.backup-text-button {
+  border: 0; background: none; color: var(--text-muted);
+  font: inherit; font-size: 12px; cursor: pointer;
+}
+.backup-text-button:hover { color: var(--text-color); }
+.backup-provider-grid {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
+}
+.backup-provider-card {
+  display: flex; flex-direction: column; gap: 13px; min-width: 0;
+  padding: 16px; border: 1px solid var(--border-color);
+  border-radius: 16px; background: var(--surface-color);
+}
+.backup-provider-heading strong { font-size: 16px; }
+.backup-date { display: flex; flex-direction: column; gap: 2px; color: var(--text-muted); font-size: 12px; }
+.backup-date strong { color: var(--text-color); font-size: 15px; }
+.backup-provider-card > .btn { flex: none; width: 100%; }
+.backup-daily-row, .backup-config { border-top: 1px solid var(--border-color); padding-top: 11px; }
+.backup-daily-row { color: var(--text-secondary); font-size: 13px; }
+.backup-config summary, .backup-manual summary {
+  color: var(--text-secondary); cursor: pointer; font-size: 13px;
+}
+.backup-config summary:hover, .backup-manual summary:hover { color: var(--text-color); }
+.backup-connect-row { display: flex; gap: 8px; margin-top: 10px; }
+.backup-connect-row .styled-input { flex: 1 1 auto; min-width: 0; }
+.backup-connect-row .btn { flex: none; min-width: 110px; }
+.backup-note { margin: 12px 0 !important; }
+.backup-manual { padding: 12px 0; border-top: 1px solid var(--border-color); }
+.backup-activity {
+  flex: none; padding: 10px 12px; margin-bottom: 12px;
+  border-radius: 10px; font-size: 13px; line-height: 1.4;
+  overflow-wrap: anywhere;
+  background: var(--surface-light); color: var(--text-color);
+}
+.backup-activity.is-success { background: rgba(64,165,111,0.17); color: #a8e8bc; }
+.backup-activity.is-error { background: rgba(255,77,77,0.16); color: #ffaaaa; }
+.backup-activity.is-warning { background: rgba(235,174,59,0.16); color: #f6d695; }
+@media (max-width: 620px) {
+  .settings-modal.modal-content { padding: 16px; border-radius: 18px; }
+  .backup-provider-grid { grid-template-columns: 1fr; }
+  .backup-connect-row { flex-wrap: wrap; }
+  .backup-connect-row .styled-input { flex-basis: 100%; }
+  .backup-connect-row .btn { width: 100%; }
+}
+
 
 /* Range slider */
 .range-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 3px; background: var(--surface-light); outline: none; margin-top: 8px; }

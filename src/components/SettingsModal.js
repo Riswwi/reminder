@@ -6,6 +6,11 @@ import { db } from '../lib/firebase';
 import { makeTaskBackup, parseTaskBackup, taskFingerprint, MAX_BACKUP_BYTES } from '../lib/taskBackup';
 import { pingMobile } from '../lib/pingMobile';
 
+function formatBackupTime(value) {
+  if (!value || !Number.isFinite(Date.parse(value))) return 'ещё нет';
+  return new Date(value).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'medium' });
+}
+
 export default function SettingsModal({ isOpen, onClose, contentWidth, setContentWidth, calendarWidth, setCalendarWidth }) {
   const fileRef = useRef(null);
   const [backupBusy, setBackupBusy] = useState(false);
@@ -15,15 +20,18 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
   const [overwriteIds, setOverwriteIds] = useState([]);
   const [backupSecret, setBackupSecret] = useState('');
   const [driveWebAppUrl, setDriveWebAppUrl] = useState('');
-  const [remoteBusy, setRemoteBusy] = useState(false);
+  const [remoteBusy, setRemoteBusy] = useState('');
+  const [remoteChecking, setRemoteChecking] = useState(false);
   const [remoteStatus, setRemoteStatus] = useState(null);
-  const [remoteMessage, setRemoteMessage] = useState('');
+  const [remoteNotice, setRemoteNotice] = useState(null);
   const sessionCheckRef = useRef(null);
 
   useEffect(() => {
     if (!isOpen) return;
     const controller = new AbortController();
     sessionCheckRef.current = controller;
+    setRemoteChecking(true);
+    setRemoteNotice(null);
     fetch('/api/backup/manage', { credentials: 'same-origin', cache: 'no-store', signal: controller.signal })
       .then(async response => {
         if (response.status === 401) return null;
@@ -35,8 +43,11 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
         if (!controller.signal.aborted) setRemoteStatus(result);
       })
       .catch(error => {
-        if (!controller.signal.aborted) setRemoteMessage(`Не удалось проверить сохранённый доступ: ${error.message}`);
+        if (!controller.signal.aborted) setRemoteNotice({ type: 'error', text: 'Не удалось проверить доступ: ' + error.message });
       })
+      .finally(() => {
+        if (!controller.signal.aborted) setRemoteChecking(false);
+      });
     return () => {
       controller.abort();
       if (sessionCheckRef.current === controller) sessionCheckRef.current = null;
@@ -47,14 +58,21 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
     setBackupSecret('');
     setDriveWebAppUrl('');
     setRemoteStatus(null);
-    setRemoteMessage('');
+    setRemoteNotice(null);
     onClose();
   };
 
   const manageRemoteBackup = async (action, enabled) => {
     if (remoteBusy || (action === 'status' && !backupSecret.trim()) || (action === 'setDriveUrl' && !driveWebAppUrl.trim())) return;
     sessionCheckRef.current?.abort();
-    setRemoteBusy(true); setRemoteMessage('');
+    setRemoteChecking(false);
+    const actionName = {
+      status: 'Проверяем ключ…', setDaily: 'Сохраняем настройку…',
+      setDriveUrl: 'Сохраняем адрес…', runVercel: 'Создаём копию в Vercel…',
+      runDrive: 'Создаём копию в Google Drive…',
+    }[action] || 'Выполняем…';
+    setRemoteBusy(action);
+    setRemoteNotice({ type: 'progress', text: actionName });
     try {
       const response = await fetch('/api/backup/manage', {
         method: 'POST',
@@ -66,36 +84,41 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
         credentials: 'same-origin',
         cache: 'no-store',
       });
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
       if (!response.ok) {
         if (response.status === 401 && action !== 'status') setRemoteStatus(null);
-        throw new Error(result.error || 'Сервер не ответил.');
+        throw new Error(`${result.error || 'Сервер не ответил.'} (HTTP ${response.status})`);
       }
       if (action === 'status') {
         setRemoteStatus(result);
         setBackupSecret('');
-        setRemoteMessage('Доступ сохранён в этом браузере. Повторно вводить код не нужно.');
+        setRemoteNotice({ type: 'success', text: 'Ключ принят. Доступ сохранён в этом браузере.' });
       } else if (action === 'setDaily') {
         setRemoteStatus(current => ({ ...current, dailyEnabled: enabled }));
-        setRemoteMessage(enabled ? 'Ежедневные копии Vercel включены.' : 'Ежедневные копии Vercel выключены. Google Drive управляется отдельно.');
+        setRemoteNotice({ type: 'success', text: enabled ? 'Ежедневные копии Vercel включены.' : 'Ежедневные копии Vercel выключены.' });
       } else if (action === 'runDrive') {
-        setRemoteMessage('Новая копия создана в Google Drive. Проверьте файл в папке To-Do Interval Backups.');
+        if (result.lastDriveBackup) setRemoteStatus(current => current && ({ ...current, lastDriveBackup: result.lastDriveBackup }));
+        setRemoteNotice({ type: result.warning ? 'warning' : 'success', text: result.warning || 'Копия в Google Drive создана. Время сохранения обновлено.' });
       } else if (action === 'setDriveUrl') {
         setRemoteStatus(current => ({ ...current, driveConfigured: true }));
         setDriveWebAppUrl('');
-        setRemoteMessage('Адрес Google-скрипта сохранён. Теперь можно запустить копию Drive кнопкой выше.');
+        setRemoteNotice({ type: 'success', text: 'Адрес Drive сохранён. Нажмите «Создать копию», чтобы проверить подключение.' });
       } else if (action === 'runVercel') {
-        setRemoteMessage(`Копия ${result.backup.tasks ?? ''} задач сохранена в Vercel.`);
+        setRemoteNotice({ type: 'success', text: `Копия ${result.backup.tasks ?? ''} задач создана в Vercel.` });
         setRemoteStatus(current => current && ({ ...current, lastVercelBackup: new Date().toISOString() }));
       }
-    } catch (error) { setRemoteMessage(`Ошибка: ${error.message}`); }
-    finally { setRemoteBusy(false); }
+    } catch (error) {
+      setRemoteNotice({ type: 'error', text: `Ошибка при «${actionName.replace('…', '')}»: ${error.message}` });
+    } finally {
+      setRemoteBusy('');
+    }
   };
 
   const forgetRemoteBackupAccess = async () => {
     if (remoteBusy) return;
     sessionCheckRef.current?.abort();
-    setRemoteBusy(true);
+    setRemoteBusy('forget');
+    setRemoteNotice({ type: 'progress', text: 'Удаляем доступ из браузера…' });
     try {
       const response = await fetch('/api/backup/manage', {
         method: 'POST',
@@ -104,12 +127,15 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
         credentials: 'same-origin',
         cache: 'no-store',
       });
-      if (!response.ok) throw new Error('Не удалось удалить сохранённый доступ.');
+      if (!response.ok) throw new Error(`Не удалось удалить доступ (HTTP ${response.status}).`);
       setRemoteStatus(null);
       setBackupSecret('');
-      setRemoteMessage('Доступ удалён из этого браузера. Копии задач не затронуты.');
-    } catch (error) { setRemoteMessage(`Ошибка: ${error.message}`); }
-    finally { setRemoteBusy(false); }
+      setRemoteNotice({ type: 'success', text: 'Доступ удалён из браузера. Копии задач не затронуты.' });
+    } catch (error) {
+      setRemoteNotice({ type: 'error', text: `Ошибка: ${error.message}` });
+    } finally {
+      setRemoteBusy('');
+    }
   };
 
   const readCloudTasks = async () => {
@@ -180,10 +206,82 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
   if (!isOpen) return null;
 
   return (
-    <div className={`modal-overlay ${isOpen ? '' : 'hidden'}`} onClick={closeSettings}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+    <div className={`modal-overlay settings-overlay ${isOpen ? '' : 'hidden'}`} onClick={closeSettings}>
+      <div className="modal-content settings-modal" onClick={(e) => e.stopPropagation()}>
         <h2>Настройки</h2>
+        {remoteNotice && <div className={`backup-activity is-${remoteNotice.type}`} role={remoteNotice.type === 'error' ? 'alert' : 'status'}>
+          {remoteNotice.text}
+        </div>}
         <div className="settings-scroll-area">
+          <div className="form-group backup-section">
+            <h3>Резервные копии</h3>
+            <div className="backup-access-row">
+              <span className={`backup-pill ${remoteStatus ? 'is-ready' : ''}`}>
+                {remoteChecking ? 'Проверяем доступ…' : remoteStatus ? '✓ Доступ сохранён в браузере' : 'Доступ не подключён'}
+              </span>
+              {remoteStatus && <button className="backup-text-button" disabled={!!remoteBusy} onClick={forgetRemoteBackupAccess}>Забыть доступ</button>}
+            </div>
+            {!remoteStatus && !remoteChecking && <div className="backup-connect-row">
+              <input className="styled-input" type="password" autoComplete="off" placeholder="Ключ копирования" aria-label="Ключ копирования" value={backupSecret} onChange={event => setBackupSecret(event.target.value)} />
+              <button className="btn btn-primary" disabled={!backupSecret.trim() || !!remoteBusy} onClick={() => manageRemoteBackup('status')}>Подключить</button>
+            </div>}
+            {remoteStatus && <div className="backup-provider-grid">
+              <section className="backup-provider-card" aria-label="Vercel">
+                <div className="backup-provider-heading"><strong>Vercel</strong><span className="backup-pill is-ready">Подключён</span></div>
+                <div className="backup-date">Последняя копия <strong>{formatBackupTime(remoteStatus.lastVercelBackup)}</strong></div>
+                <button className="btn btn-primary" disabled={!!remoteBusy} onClick={() => manageRemoteBackup('runVercel')}>
+                  {remoteBusy === 'runVercel' ? 'Сохраняем…' : 'Создать копию'}
+                </button>
+                <div className="backup-daily-row">
+                  <span>Ежедневно</span>
+                  <label className="switch" aria-label="Ежедневные копии Vercel"><input type="checkbox" checked={!!remoteStatus.dailyEnabled} disabled={!!remoteBusy} onChange={event => manageRemoteBackup('setDaily', event.target.checked)} /><span className="slider round"></span></label>
+                </div>
+              </section>
+              <section className="backup-provider-card" aria-label="Google Drive">
+                <div className="backup-provider-heading"><strong>Google Drive</strong><span className={`backup-pill ${remoteStatus.driveConfigured ? 'is-ready' : ''}`}>{remoteStatus.driveConfigured ? 'Адрес сохранён' : 'Не подключён'}</span></div>
+                <div className="backup-date">Последняя копия через сайт <strong>{formatBackupTime(remoteStatus.lastDriveBackup)}</strong></div>
+                <button className="btn btn-secondary" disabled={!!remoteBusy || !remoteStatus.driveConfigured} onClick={() => manageRemoteBackup('runDrive')}>
+                  {remoteBusy === 'runDrive' ? 'Сохраняем…' : 'Создать копию'}
+                </button>
+                <details className="backup-config">
+                  <summary>{remoteStatus.driveConfigured ? 'Изменить адрес скрипта' : 'Подключить скрипт'}</summary>
+                  <div className="backup-connect-row">
+                    <input className="styled-input" type="url" inputMode="url" placeholder="Адрес Google-скрипта /exec" aria-label="Адрес Google Apps Script Web app" value={driveWebAppUrl} onChange={event => setDriveWebAppUrl(event.target.value)} />
+                    <button className="btn btn-secondary" disabled={!!remoteBusy || !driveWebAppUrl.trim()} onClick={() => manageRemoteBackup('setDriveUrl')}>Сохранить</button>
+                  </div>
+                </details>
+              </section>
+            </div>}
+            <p className="backup-note">Google Drive делает ежедневные копии отдельно. Сайт показывает время только копий, запущенных кнопкой здесь или в приложении.</p>
+            <details className="backup-manual">
+              <summary>Скачать или восстановить JSON-файл</summary>
+              <div className="backup-actions">
+                <button className="btn btn-secondary" disabled={backupBusy} onClick={exportTasks}>Скачать все задачи</button>
+                <button className="btn btn-secondary" disabled={backupBusy} onClick={() => fileRef.current?.click()}>Восстановить из файла</button>
+              </div>
+              <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={chooseBackup} />
+              {backupBusy && <p role="status">Работаем с файлом…</p>}
+              {backupError && <p className="backup-error" role="alert">{backupError}</p>}
+              {backupMessage && <p role="status">{backupMessage}</p>}
+            </details>
+            {preview && <div className="backup-preview">
+              <strong>Перед восстановлением</strong>
+              <p>В файле {preview.tasks.length} задач. Новых: {preview.tasks.filter(task => !Object.hasOwn(preview.existing, task.id)).length}. Уже существуют: {preview.tasks.filter(task => Object.hasOwn(preview.existing, task.id)).length}.</p>
+              <p>Отсутствующие задачи будут добавлены. Существующие не изменятся, если не отметить их ниже. Ничего не удаляется.</p>
+              <div className="backup-conflicts">
+                {preview.tasks.filter(task => Object.hasOwn(preview.existing, task.id)).map(task => <label key={task.id}>
+                  <input type="checkbox" checked={overwriteIds.includes(task.id)} onChange={event => setOverwriteIds(ids => event.target.checked ? [...ids, task.id] : ids.filter(id => id !== task.id))} />
+                  Заменить «{task.data.title}»
+                </label>)}
+              </div>
+              <div className="backup-actions">
+                <button className="btn btn-primary" disabled={backupBusy || !preview.tasks.some(task => !Object.hasOwn(preview.existing, task.id) || overwriteIds.includes(task.id))} onClick={restoreTasks}>Подтвердить восстановление</button>
+                <button className="btn btn-secondary" disabled={backupBusy} onClick={() => { setPreview(null); setOverwriteIds([]); }}>Отмена</button>
+              </div>
+            </div>}
+
+          </div>
+
 
           <div className="form-group" style={{ marginTop: '16px' }}>
             <label>Уведомления</label>
@@ -207,57 +305,7 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
               Проверить уведомление
             </button>
           </div>
-          <div className="form-group backup-section">
-            <label>Резервная копия задач</label>
-            <p>Vercel и Google Drive создают ежедневные копии независимо. Доступ к управлению Vercel достаточно подтвердить один раз на этом браузере: сам код здесь не сохраняется. Переключатель ниже управляет только Vercel.</p>
-            {!remoteStatus && <div className="backup-actions">
-              <input className="styled-input" type="password" autoComplete="off" placeholder="Код резервного копирования" aria-label="Код резервного копирования" value={backupSecret} onChange={event => setBackupSecret(event.target.value)} />
-              <button className="btn btn-secondary" disabled={!backupSecret.trim() || remoteBusy} onClick={() => manageRemoteBackup('status')}>Сохранить доступ</button>
-            </div>}
-            {remoteStatus && <>
-              <div className="backup-actions">
-                <button className="btn btn-primary" disabled={remoteBusy} onClick={() => manageRemoteBackup('runVercel')}>Копия в Vercel</button>
-                <button className="btn btn-secondary" disabled={remoteBusy || !remoteStatus.driveConfigured} onClick={() => manageRemoteBackup('runDrive')}>Копия в Google Drive</button>
-                <button className="btn btn-secondary" disabled={remoteBusy} onClick={forgetRemoteBackupAccess}>Забыть доступ</button>
-              </div>
-              <p>Для кнопки Drive: в Google Apps Script выберите «Развернуть → Новое развертывание → Веб-приложение», скопируйте адрес с окончанием /exec и вставьте его здесь. BACKUP_TOKEN в свойствах скрипта должен совпадать с вашим CRON_SECRET.</p>
-              <div className="backup-actions">
-                <input className="styled-input" type="url" inputMode="url" placeholder="Адрес Google-скрипта /exec" aria-label="Адрес Google Apps Script Web app" value={driveWebAppUrl} onChange={event => setDriveWebAppUrl(event.target.value)} />
-                <button className="btn btn-secondary" disabled={remoteBusy || !driveWebAppUrl.trim()} onClick={() => manageRemoteBackup('setDriveUrl')}>Сохранить адрес Drive</button>
-              </div>
-              <div className="toggle-group" style={{ padding: '12px 16px', background: 'var(--surface-light)', borderRadius: '12px', marginTop: '12px' }}>
-                <span>Ежедневные копии Vercel</span>
-                <label className="switch"><input type="checkbox" checked={remoteStatus.dailyEnabled} disabled={remoteBusy} onChange={event => manageRemoteBackup('setDaily', event.target.checked)} /><span className="slider round"></span></label>
-              </div>
-              <p>Vercel: {remoteStatus.lastVercelBackup ? new Date(remoteStatus.lastVercelBackup).toLocaleString('ru-RU') : 'копий пока нет'}. Google Drive: ежедневный запуск настроен отдельно, сайт не может проверить его файлы. {remoteStatus.driveConfigured ? 'Ручной запуск подключён.' : 'Для ручной кнопки сохраните адрес скрипта выше.'}</p>
-            </>}
-            {remoteBusy && <p role="status">Подождите…</p>}
-            {remoteMessage && <p role="status">{remoteMessage}</p>}
-            <p>Отдельно можно скачать JSON-файл со всеми задачами и восстановить их вручную. Храните файл вне телефона.</p>
-            <div className="backup-actions">
-              <button className="btn btn-secondary" disabled={backupBusy} onClick={exportTasks}>Скачать все задачи</button>
-              <button className="btn btn-secondary" disabled={backupBusy} onClick={() => fileRef.current?.click()}>Восстановить из файла</button>
-            </div>
-            <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={chooseBackup} />
-            {backupBusy && <p role="status">Пожалуйста, подождите…</p>}
-            {backupError && <p className="backup-error" role="alert">{backupError}</p>}
-            {backupMessage && <p role="status">{backupMessage}</p>}
-            {preview && <div className="backup-preview">
-              <strong>Перед восстановлением</strong>
-              <p>В файле {preview.tasks.length} задач. Новых: {preview.tasks.filter(task => !Object.hasOwn(preview.existing, task.id)).length}. Уже существуют: {preview.tasks.filter(task => Object.hasOwn(preview.existing, task.id)).length}.</p>
-              <p>Отсутствующие задачи будут добавлены. Существующие не изменятся, если не отметить их ниже. Ничего не удаляется.</p>
-              <div className="backup-conflicts">
-                {preview.tasks.filter(task => Object.hasOwn(preview.existing, task.id)).map(task => <label key={task.id}>
-                  <input type="checkbox" checked={overwriteIds.includes(task.id)} onChange={event => setOverwriteIds(ids => event.target.checked ? [...ids, task.id] : ids.filter(id => id !== task.id))} />
-                  Заменить «{task.data.title}»
-                </label>)}
-              </div>
-              <div className="backup-actions">
-                <button className="btn btn-primary" disabled={backupBusy || !preview.tasks.some(task => !Object.hasOwn(preview.existing, task.id) || overwriteIds.includes(task.id))} onClick={restoreTasks}>Подтвердить восстановление</button>
-                <button className="btn btn-secondary" disabled={backupBusy} onClick={() => { setPreview(null); setOverwriteIds([]); }}>Отмена</button>
-              </div>
-            </div>}
-          </div>
+
         </div>
 
         <div className="modal-actions">
