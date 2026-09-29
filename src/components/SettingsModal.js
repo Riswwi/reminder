@@ -252,7 +252,7 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
                 </details>
               </section>
             </div>}
-            <p className="backup-note">Google Drive делает ежедневные копии отдельно. Сайт показывает время только копий, запущенных кнопкой здесь или в приложении.</p>
+            <p className="backup-note">Ключ Drive проверяется при создании копии. Время отдельного ежедневного запуска Google здесь не видно.</p>
             <details className="backup-manual">
               <summary>Скачать или восстановить JSON-файл</summary>
               <div className="backup-actions">
