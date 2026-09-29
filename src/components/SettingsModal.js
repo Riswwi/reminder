@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { collection, doc, getDocsFromServer, runTransaction } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
+import { auth, db } from '../lib/firebase';
 import { makeTaskBackup, parseTaskBackup, taskFingerprint, MAX_BACKUP_BYTES } from '../lib/taskBackup';
 import { pingMobile } from '../lib/pingMobile';
 
@@ -19,6 +20,7 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
   const [preview, setPreview] = useState(null);
   const [overwriteIds, setOverwriteIds] = useState([]);
   const [backupSecret, setBackupSecret] = useState('');
+  const [googleUser, setGoogleUser] = useState(null);
   const [driveWebAppUrl, setDriveWebAppUrl] = useState('');
   const [remoteBusy, setRemoteBusy] = useState('');
   const [remoteChecking, setRemoteChecking] = useState(false);
@@ -26,13 +28,22 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
   const [remoteNotice, setRemoteNotice] = useState(null);
   const sessionCheckRef = useRef(null);
 
+  useEffect(() => onAuthStateChanged(auth, setGoogleUser), []);
+
   useEffect(() => {
     if (!isOpen) return;
     const controller = new AbortController();
     sessionCheckRef.current = controller;
     setRemoteChecking(true);
     setRemoteNotice(null);
-    fetch('/api/backup/manage', { credentials: 'same-origin', cache: 'no-store', signal: controller.signal })
+    const fetchStatus = async () => {
+      const token = googleUser ? await googleUser.getIdToken() : null;
+      return fetch('/api/backup/manage', {
+        headers: token ? { Authorization: `Firebase ${token}` } : {},
+        credentials: 'same-origin', cache: 'no-store', signal: controller.signal,
+      });
+    };
+    fetchStatus()
       .then(async response => {
         if (response.status === 401) return null;
         const result = await response.json();
@@ -52,7 +63,37 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
       controller.abort();
       if (sessionCheckRef.current === controller) sessionCheckRef.current = null;
     };
-  }, [isOpen]);
+  }, [isOpen, googleUser]);
+
+  const connectGoogle = async () => {
+    if (remoteBusy) return;
+    setRemoteBusy('google');
+    setRemoteNotice({ type: 'progress', text: 'Открываем вход Google…' });
+    try {
+      const result = await signInWithPopup(auth, new GoogleAuthProvider());
+      const token = await result.user.getIdToken();
+      if (backupSecret.trim()) {
+        const response = await fetch('/api/backup/manage', {
+          method: 'POST', credentials: 'same-origin', cache: 'no-store',
+          headers: { Authorization: `Bearer ${backupSecret.trim()}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'linkGoogle', idToken: token }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Не удалось привязать аккаунт.');
+        setRemoteStatus(data);
+        setBackupSecret('');
+        setRemoteNotice({ type: 'success', text: `Аккаунт ${result.user.email} подключён. Ключ больше не нужен.` });
+      } else {
+        const response = await fetch('/api/backup/manage', { headers: { Authorization: `Firebase ${token}` }, cache: 'no-store' });
+        const data = await response.json();
+        if (!response.ok) throw new Error('Этот Google-аккаунт ещё не подключён. Введите ключ копирования и нажмите «Войти через Google» снова.');
+        setRemoteStatus(data);
+        setRemoteNotice({ type: 'success', text: `Вход выполнен: ${result.user.email}.` });
+      }
+    } catch (error) {
+      setRemoteNotice({ type: 'error', text: error.message });
+    } finally { setRemoteBusy(''); }
+  };
 
   const closeSettings = () => {
     setBackupSecret('');
@@ -74,10 +115,11 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
     setRemoteBusy(action);
     setRemoteNotice({ type: 'progress', text: actionName });
     try {
+      const googleToken = googleUser && action !== 'status' ? await googleUser.getIdToken() : null;
       const response = await fetch('/api/backup/manage', {
         method: 'POST',
         headers: {
-          ...(action === 'status' ? { Authorization: `Bearer ${backupSecret.trim()}` } : {}),
+          ...(action === 'status' ? { Authorization: `Bearer ${backupSecret.trim()}` } : googleToken ? { Authorization: `Firebase ${googleToken}` } : {}),
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(action === 'status' ? { action: 'remember' } : action === 'setDaily' ? { action, enabled } : action === 'setDriveUrl' ? { action, url: driveWebAppUrl.trim() } : { action }),
@@ -128,6 +170,7 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
         cache: 'no-store',
       });
       if (!response.ok) throw new Error(`Не удалось удалить доступ (HTTP ${response.status}).`);
+      await signOut(auth);
       setRemoteStatus(null);
       setBackupSecret('');
       setRemoteNotice({ type: 'success', text: 'Доступ удалён из браузера. Копии задач не затронуты.' });
@@ -217,14 +260,17 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
             <h3>Резервные копии</h3>
             <div className="backup-access-row">
               <span className={`backup-pill ${remoteStatus ? 'is-ready' : ''}`}>
-                {remoteChecking ? 'Проверяем доступ…' : remoteStatus ? '✓ Доступ сохранён в браузере' : 'Доступ не подключён'}
+                {remoteChecking ? 'Проверяем доступ…' : remoteStatus ? `✓ ${googleUser?.email || 'Доступ сохранён в браузере'}` : 'Доступ не подключён'}
               </span>
               {remoteStatus && <button className="backup-text-button" disabled={!!remoteBusy} onClick={forgetRemoteBackupAccess}>Забыть доступ</button>}
             </div>
+            {!remoteStatus && !remoteChecking && <button className="btn btn-primary" disabled={!!remoteBusy} onClick={connectGoogle}>Войти через Google</button>}
             {!remoteStatus && !remoteChecking && <div className="backup-connect-row">
               <input className="styled-input" type="password" autoComplete="off" placeholder="Ключ копирования" aria-label="Ключ копирования" value={backupSecret} onChange={event => setBackupSecret(event.target.value)} />
-              <button className="btn btn-primary" disabled={!backupSecret.trim() || !!remoteBusy} onClick={() => manageRemoteBackup('status')}>Подключить</button>
+              <button className="btn btn-secondary" disabled={!backupSecret.trim() || !!remoteBusy} onClick={() => manageRemoteBackup('status')}>Проверить ключ</button>
             </div>}
+            {!remoteStatus && !remoteChecking && <p className="backup-note">При первом подключении введите ключ и нажмите «Войти через Google». Затем на сайте и телефоне понадобится только тот же Google-аккаунт.</p>}
+            {remoteStatus && <details className="backup-config"><summary>{googleUser ? 'Сменить Google-аккаунт' : 'Привязать Google-аккаунт для входа без ключа'}</summary><div className="backup-connect-row"><input className="styled-input" type="password" autoComplete="off" placeholder="Ключ копирования" value={backupSecret} onChange={event => setBackupSecret(event.target.value)} /><button className="btn btn-secondary" disabled={!backupSecret.trim() || !!remoteBusy} onClick={connectGoogle}>Привязать Google</button></div></details>}
             {remoteStatus && <div className="backup-provider-grid">
               <section className="backup-provider-card" aria-label="Vercel">
                 <div className="backup-provider-heading"><strong>Vercel</strong><span className="backup-pill is-ready">Подключён</span></div>
