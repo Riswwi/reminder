@@ -54,7 +54,8 @@ function backupToDrive() {
     while (sameName.hasNext()) {
       const existing = sameName.next();
       if (existing.getDescription() === BACKUP_MARKER && existing.getSize() === expectedBytes) {
-        console.log('Google Drive already has this date: ' + date);
+        const removed = pruneDriveBackups_(folder);
+        console.log('Google Drive already has this date: ' + date + '; older copies removed: ' + removed);
         return;
       }
     }
@@ -94,8 +95,8 @@ function pruneDriveBackups_(folder) {
   files.forEach(file => {
     const size = file.getSize();
     if (retained >= 3 && (retained >= MAX_BACKUPS || bytes + size > MAX_BACKUP_BYTES)) {
-      // Drive trash is automatically emptied by Google later. No other files are touched.
-      file.setTrashed(true);
+      // Permanently delete only marked files in this backup folder, after the new file was verified.
+      deleteBackupFile_(file);
       removed += 1;
     } else {
       retained += 1;
@@ -103,4 +104,15 @@ function pruneDriveBackups_(folder) {
     }
   });
   return removed;
+}
+
+function deleteBackupFile_(file) {
+  const response = UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(file.getId()), {
+    method: 'delete',
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+    muteHttpExceptions: true,
+  });
+  if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) {
+    throw new Error('Could not delete an old app backup: HTTP ' + response.getResponseCode());
+  }
 }
