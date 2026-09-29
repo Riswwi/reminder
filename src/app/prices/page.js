@@ -254,11 +254,11 @@ export default function PricesPage() {
         </div>
         <button 
           onClick={openAddProductModal}
-          style={{ background: 'var(--primary-color)', color: '#fff', border: 'none', padding: '10px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', flexShrink: 0 }}
+          style={{ background: 'var(--primary-color)', color: '#fff', border: 'none', padding: '11px 24px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', flex: '0 0 auto', minWidth: 150 }}
         >
           + Добавить
         </button>
-        <button className="btn btn-secondary" onClick={exportPrices} title="Скачать все цены в текстовом виде для ChatGPT" style={{ flexShrink: 0 }}>Экспорт для ChatGPT</button>
+        <button className="btn btn-secondary" onClick={exportPrices} title="Скачать все цены в удобном для ChatGPT текстовом файле" style={{ flex: '0 0 auto', width: 'auto', padding: '10px 14px', borderRadius: 8, fontSize: 14 }}>Экспорт</button>
       </div>
 
       <div className="tasks-body" style={{ padding: '0 8px', gap: '12px', display: 'flex', flexDirection: 'column' }}>
