@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { collection, doc, getDocsFromServer, runTransaction } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { makeTaskBackup, parseTaskBackup, taskFingerprint, MAX_BACKUP_BYTES } from '../lib/taskBackup';
@@ -17,6 +17,30 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
   const [remoteBusy, setRemoteBusy] = useState(false);
   const [remoteStatus, setRemoteStatus] = useState(null);
   const [remoteMessage, setRemoteMessage] = useState('');
+  const sessionCheckRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const controller = new AbortController();
+    sessionCheckRef.current = controller;
+    fetch('/api/backup/manage', { credentials: 'same-origin', cache: 'no-store', signal: controller.signal })
+      .then(async response => {
+        if (response.status === 401) return null;
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Сервер не ответил.');
+        return result;
+      })
+      .then(result => {
+        if (!controller.signal.aborted) setRemoteStatus(result);
+      })
+      .catch(error => {
+        if (!controller.signal.aborted) setRemoteMessage(`Не удалось проверить сохранённый доступ: ${error.message}`);
+      })
+    return () => {
+      controller.abort();
+      if (sessionCheckRef.current === controller) sessionCheckRef.current = null;
+    };
+  }, [isOpen]);
 
   const closeSettings = () => {
     setBackupSecret('');
@@ -26,23 +50,29 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
   };
 
   const manageRemoteBackup = async (action, enabled) => {
-    if (!backupSecret.trim() || remoteBusy) return;
+    if (remoteBusy || (action === 'status' && !backupSecret.trim())) return;
+    sessionCheckRef.current?.abort();
     setRemoteBusy(true); setRemoteMessage('');
     try {
       const response = await fetch('/api/backup/manage', {
-        method: action === 'status' ? 'GET' : 'POST',
+        method: 'POST',
         headers: {
-          Authorization: `Bearer ${backupSecret.trim()}`,
-          ...(action === 'status' ? {} : { 'Content-Type': 'application/json' }),
+          ...(action === 'status' ? { Authorization: `Bearer ${backupSecret.trim()}` } : {}),
+          'Content-Type': 'application/json',
         },
-        ...(action === 'status' ? {} : { body: JSON.stringify(action === 'run' ? { action: 'run' } : { action: 'setDaily', enabled }) }),
+        body: JSON.stringify(action === 'status' ? { action: 'remember' } : action === 'run' ? { action: 'run' } : { action: 'setDaily', enabled }),
+        credentials: 'same-origin',
         cache: 'no-store',
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Сервер не ответил.');
+      if (!response.ok) {
+        if (response.status === 401 && action !== 'status') setRemoteStatus(null);
+        throw new Error(result.error || 'Сервер не ответил.');
+      }
       if (action === 'status') {
         setRemoteStatus(result);
-        setRemoteMessage('Подключение проверено.');
+        setBackupSecret('');
+        setRemoteMessage('Доступ сохранён в этом браузере. Повторно вводить код не нужно.');
       } else if (action === 'setDaily') {
         setRemoteStatus(current => ({ ...current, dailyEnabled: enabled }));
         setRemoteMessage(enabled ? 'Ежедневные копии Vercel включены.' : 'Ежедневные копии Vercel выключены. Google Drive управляется отдельно.');
@@ -50,9 +80,29 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
         const drive = result.drive?.status;
         setRemoteMessage(drive === 'saved'
           ? `Копия ${result.backup.tasks ?? ''} задач сохранена в Vercel и Google Drive.`
-          : `Копия сохранена в Vercel. Google Drive: ${drive === 'not_configured' ? 'ещё не подключён' : 'сохранить не удалось'}.`);
+          : `Копия сохранена в Vercel. ${drive === 'not_configured' ? 'Ручной запуск Drive не настроен; ежедневный скрипт работает отдельно.' : 'Ручной запуск Drive не удался; проверьте его отдельно.'}`);
         setRemoteStatus(current => current && ({ ...current, lastVercelBackup: new Date().toISOString() }));
       }
+    } catch (error) { setRemoteMessage(`Ошибка: ${error.message}`); }
+    finally { setRemoteBusy(false); }
+  };
+
+  const forgetRemoteBackupAccess = async () => {
+    if (remoteBusy) return;
+    sessionCheckRef.current?.abort();
+    setRemoteBusy(true);
+    try {
+      const response = await fetch('/api/backup/manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'forget' }),
+        credentials: 'same-origin',
+        cache: 'no-store',
+      });
+      if (!response.ok) throw new Error('Не удалось удалить сохранённый доступ.');
+      setRemoteStatus(null);
+      setBackupSecret('');
+      setRemoteMessage('Доступ удалён из этого браузера. Копии задач не затронуты.');
     } catch (error) { setRemoteMessage(`Ошибка: ${error.message}`); }
     finally { setRemoteBusy(false); }
   };
@@ -154,20 +204,23 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
           </div>
           <div className="form-group backup-section">
             <label>Резервная копия задач</label>
-            <p>Ежедневные копии Vercel и Google Drive работают независимо, когда они настроены. Переключатель ниже управляет только Vercel; расписание Drive настраивается в Google Apps Script. Для управления Vercel введите CRON_SECRET; код не сохраняется в браузере.</p>
-            <input className="styled-input w-100" type="password" autoComplete="off" placeholder="Код резервного копирования" aria-label="Код резервного копирования" value={backupSecret} onChange={event => { setBackupSecret(event.target.value); setRemoteStatus(null); }} />
-            <div className="backup-actions">
-              <button className="btn btn-secondary" disabled={!backupSecret.trim() || remoteBusy} onClick={() => manageRemoteBackup('status')}>Проверить подключение</button>
-              <button className="btn btn-primary" disabled={!remoteStatus || remoteBusy} onClick={() => manageRemoteBackup('run')}>Создать копию сейчас</button>
-            </div>
+            <p>Vercel и Google Drive создают ежедневные копии независимо. Доступ к управлению Vercel достаточно подтвердить один раз на этом браузере: сам код здесь не сохраняется. Переключатель ниже управляет только Vercel.</p>
+            {!remoteStatus && <div className="backup-actions">
+              <input className="styled-input" type="password" autoComplete="off" placeholder="Код резервного копирования" aria-label="Код резервного копирования" value={backupSecret} onChange={event => setBackupSecret(event.target.value)} />
+              <button className="btn btn-secondary" disabled={!backupSecret.trim() || remoteBusy} onClick={() => manageRemoteBackup('status')}>Сохранить доступ</button>
+            </div>}
             {remoteStatus && <>
+              <div className="backup-actions">
+                <button className="btn btn-primary" disabled={remoteBusy} onClick={() => manageRemoteBackup('run')}>Создать копию сейчас</button>
+                <button className="btn btn-secondary" disabled={remoteBusy} onClick={forgetRemoteBackupAccess}>Забыть доступ</button>
+              </div>
               <div className="toggle-group" style={{ padding: '12px 16px', background: 'var(--surface-light)', borderRadius: '12px', marginTop: '12px' }}>
                 <span>Ежедневные копии Vercel</span>
                 <label className="switch"><input type="checkbox" checked={remoteStatus.dailyEnabled} disabled={remoteBusy} onChange={event => manageRemoteBackup('setDaily', event.target.checked)} /><span className="slider round"></span></label>
               </div>
-              <p>Vercel: {remoteStatus.lastVercelBackup ? new Date(remoteStatus.lastVercelBackup).toLocaleString('ru-RU') : 'копий пока нет'}. Google Drive: {remoteStatus.driveConfigured ? 'ручной вызов подключён; ежедневный триггер проверьте в Google Apps Script' : 'ручной вызов не подключён; ежедневные копии Drive проверяйте в Google Apps Script'}.</p>
+              <p>Vercel: {remoteStatus.lastVercelBackup ? new Date(remoteStatus.lastVercelBackup).toLocaleString('ru-RU') : 'копий пока нет'}. Google Drive: копирование настроено отдельно, сайт не может проверить его состояние. {remoteStatus.driveConfigured ? 'Ручной запуск из сайта подключён.' : 'Кнопка выше создаёт копию только в Vercel.'} Дату Drive-копии смотрите в Google Drive.</p>
             </>}
-            {remoteBusy && <p role="status">Создаём копию…</p>}
+            {remoteBusy && <p role="status">Подождите…</p>}
             {remoteMessage && <p role="status">{remoteMessage}</p>}
             <p>Отдельно можно скачать JSON-файл со всеми задачами и восстановить их вручную. Храните файл вне телефона.</p>
             <div className="backup-actions">

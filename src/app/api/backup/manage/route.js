@@ -2,6 +2,9 @@ import {
   backupConfigured, createTaskBackup, driveConfigured, getDailyEnabled, listAutomaticBackups,
   sendBackupToDrive, setDailyEnabled,
 } from '../../../../lib/serverTaskBackup';
+import {
+  createBackupWebSession, matchesBackupSecret, verifyBackupWebSession,
+} from '../../../../lib/backupWebSession.mjs';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -13,11 +16,33 @@ const allowedOrigins = new Set([
   'capacitor://localhost',
 ]);
 
-function respond(request, body, status = 200) {
+function respond(request, body, status = 200, setCookie) {
   const origin = request.headers.get('origin');
   const headers = { 'Cache-Control': 'no-store', Vary: 'Origin' };
   if (allowedOrigins.has(origin)) headers['Access-Control-Allow-Origin'] = origin;
+  if (setCookie) headers['Set-Cookie'] = setCookie;
   return Response.json(body, { status, headers });
+}
+
+function cookieName(request) {
+  return new URL(request.url).protocol === 'https:' ? '__Host-todo_backup_session' : 'todo_backup_session';
+}
+
+function sessionCookie(request, value, clear = false) {
+  const secure = new URL(request.url).protocol === 'https:';
+  return `${cookieName(request)}=${value}; Path=/; HttpOnly; SameSite=Strict; ` +
+    (secure ? 'Secure; ' : '') + `Max-Age=${clear ? 0 : 365 * 24 * 60 * 60}`;
+}
+
+function readSessionCookie(request) {
+  const name = `${cookieName(request)}=`;
+  const entry = (request.headers.get('cookie') || '').split(';').map(item => item.trim())
+    .find(item => item.startsWith(name));
+  return entry?.slice(name.length) || '';
+}
+
+function sameOrigin(request) {
+  return request.headers.get('origin') === new URL(request.url).origin;
 }
 
 export function OPTIONS(request) {
@@ -36,20 +61,29 @@ export function OPTIONS(request) {
 }
 
 function authorize(request) {
-  return backupConfigured() && request.headers.get('authorization') === `Bearer ${process.env.CRON_SECRET}`;
+  if (!backupConfigured()) return null;
+  if (matchesBackupSecret(request.headers.get('authorization'), process.env.CRON_SECRET)) return 'bearer';
+  if (verifyBackupWebSession(readSessionCookie(request), process.env.CRON_SECRET)) return 'cookie';
+  return null;
+}
+
+async function status() {
+  const [dailyEnabled, backups] = await Promise.all([getDailyEnabled(), listAutomaticBackups()]);
+  return {
+    dailyEnabled,
+    driveConfigured: driveConfigured(),
+    lastVercelBackup: backups[0]?.uploadedAt || null,
+    backupCount: backups.length,
+  };
 }
 
 export async function GET(request) {
   if (!backupConfigured()) return respond(request, { error: 'Резервное копирование ещё не настроено в Vercel.' }, 503);
-  if (!authorize(request)) return respond(request, { error: 'Неверный код резервного копирования.' }, 401);
+  const auth = authorize(request);
+  if (!auth) return respond(request, { error: 'Неверный код резервного копирования.' }, 401);
   try {
-    const [dailyEnabled, backups] = await Promise.all([getDailyEnabled(), listAutomaticBackups()]);
-    return respond(request, {
-      dailyEnabled,
-      driveConfigured: driveConfigured(),
-      lastVercelBackup: backups[0]?.uploadedAt || null,
-      backupCount: backups.length,
-    });
+    return respond(request, await status(), 200,
+      auth === 'cookie' ? sessionCookie(request, createBackupWebSession(process.env.CRON_SECRET)) : undefined);
   } catch (error) {
     console.error('Backup status failed:', error);
     return respond(request, { error: 'Не удалось получить состояние копий.' }, 500);
@@ -57,14 +91,35 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
-  if (!backupConfigured()) return respond(request, { error: 'Резервное копирование ещё не настроено в Vercel.' }, 503);
-  if (!authorize(request)) return respond(request, { error: 'Неверный код резервного копирования.' }, 401);
   let input;
   try {
     const text = await request.text();
     if (text.length > 1024) return respond(request, { error: 'Некорректный запрос.' }, 413);
     input = JSON.parse(text);
   } catch { return respond(request, { error: 'Некорректный запрос.' }, 400); }
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    return respond(request, { error: 'Некорректный запрос.' }, 400);
+  }
+  if (input?.action === 'forget' && sameOrigin(request)) {
+    return respond(request, { ok: true }, 200, sessionCookie(request, '', true));
+  }
+  if (!backupConfigured()) return respond(request, { error: 'Резервное копирование ещё не настроено в Vercel.' }, 503);
+  const auth = authorize(request);
+  if (input?.action === 'remember') {
+    if (!sameOrigin(request) || auth !== 'bearer') {
+      return respond(request, { error: 'Неверный код резервного копирования.' }, 401);
+    }
+    try {
+      return respond(request, await status(), 200,
+        sessionCookie(request, createBackupWebSession(process.env.CRON_SECRET)));
+    } catch (error) {
+      console.error('Backup status failed:', error);
+      return respond(request, { error: 'Не удалось получить состояние копий.' }, 500);
+    }
+  }
+  if (!auth || (auth === 'cookie' && !sameOrigin(request))) {
+    return respond(request, { error: 'Неверный код резервного копирования.' }, 401);
+  }
   try {
     if (input.action === 'setDaily' && typeof input.enabled === 'boolean') {
       await setDailyEnabled(input.enabled);
