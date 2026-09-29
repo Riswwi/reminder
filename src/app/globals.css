@@ -589,6 +589,14 @@ input:checked + .slider:before { transform: translateX(22px); }
 .btn:hover { opacity: 0.85; }
 .btn-primary { background: var(--primary-color); color: #fff; }
 .btn-secondary { background: var(--surface-light); color: var(--text-color); }
+.backup-section { margin-top: 26px; border-top: 1px solid var(--border-color); padding-top: 20px; }
+.backup-section p { color: var(--text-muted); font-size: 13px; line-height: 1.5; margin: 8px 0; }
+.backup-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.backup-actions .btn { min-width: 150px; }
+.backup-section .backup-error { color: #ff7777; }
+.backup-preview { margin-top: 14px; padding: 14px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-light); }
+.backup-conflicts { max-height: 170px; overflow-y: auto; }
+.backup-conflicts label { display: flex; align-items: center; gap: 9px; margin: 8px 0; color: var(--text-color); overflow-wrap: anywhere; }
 
 /* Range slider */
 .range-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 3px; background: var(--surface-light); outline: none; margin-top: 8px; }
