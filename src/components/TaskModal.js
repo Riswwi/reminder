@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { doc, setDoc, updateDoc, collection, onSnapshot } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase';
 import { pingMobile } from '@/lib/pingMobile';
@@ -536,6 +536,13 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
   const titleRef = useRef(null);
   const selectedTasksListRef = useRef(null);
 
+  useLayoutEffect(() => {
+    if (!isOpen || !titleRef.current) return;
+    const field = titleRef.current;
+    field.style.height = 'auto';
+    field.style.height = `${field.scrollHeight}px`;
+  }, [isOpen, title]);
+
   const selectedDateTasks = tasks.filter(
     task => task.dueDate === dueDate && !task.done && task.id !== editTask?.id
   );
@@ -800,12 +807,8 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                     placeholder="Новая задача"
                     value={title}
                     rows={1}
-                    style={{ resize: 'none', overflow: 'hidden' }}
-                    onChange={e => {
-                      setTitle(e.target.value);
-                      e.target.style.height = 'auto';
-                      e.target.style.height = e.target.scrollHeight + 'px';
-                    }}
+                    style={{ resize: 'none', overflow: 'hidden', overflowWrap: 'anywhere', lineHeight: 1.15 }}
+                    onChange={e => setTitle(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSave(); } }}
                     autoComplete="off"
                   />
