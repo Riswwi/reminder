@@ -446,6 +446,9 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
   const [checklist, setChecklist] = useState([]);
   const [priority, setPriority] = useState(1);
   const [isAllDay, setIsAllDay] = useState(true);
+  const [allDayReminderMode, setAllDayReminderMode] = useState('daily');
+  const [allDayReminderTime, setAllDayReminderTime] = useState('09:00');
+  const [allDayReminderStartDate, setAllDayReminderStartDate] = useState(null);
   const [dueDate, setDueDate]   = useState(todayStr());
   const [dueTime, setDueTime]   = useState(currentTimeStr);
   const [reminder, setReminder] = useState('-1');
@@ -457,6 +460,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
   const [hiddenTaskCount, setHiddenTaskCount] = useState(0);
 
   const [showRemSheet,    setShowRemSheet]    = useState(false);
+  const [showAllDayReminderSheet, setShowAllDayReminderSheet] = useState(false);
   const [showCyclicSheet, setShowCyclicSheet] = useState(false);
   const [showRepeatSheet, setShowRepeatSheet] = useState(false);
   
@@ -607,6 +611,9 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
         setChecklist(Array.isArray(editTask.checklist) ? editTask.checklist : []);
         setPriority(editTask.priority || 1);
         setIsAllDay(editTask.isAllDay !== false);
+        setAllDayReminderMode(['daily', 'once', 'off'].includes(editTask.allDayReminderMode) ? editTask.allDayReminderMode : 'legacy');
+        setAllDayReminderTime(/^([01]\d|2[0-3]):[0-5]\d$/.test(editTask.allDayReminderTime || '') ? editTask.allDayReminderTime : '09:00');
+        setAllDayReminderStartDate(editTask.allDayReminderStartDate || editTask.dueDate || td);
         setDueDate(editTask.dueDate || td);
         setDueTime(editTask.dueTime || '09:00');
         setReminder(editTask.reminderOffset !== null ? String(editTask.reminderOffset) : '-1');
@@ -620,6 +627,9 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
         setChecklist([{ id: crypto.randomUUID(), text: '', done: false }]);
         setPriority(1);
         setIsAllDay(true);
+        setAllDayReminderMode('daily');
+        setAllDayReminderTime('09:00');
+        setAllDayReminderStartDate(editTask?.dueDate || td);
         setDueDate(editTask?.dueDate || td);
         setDueTime(currentTimeStr());
         setReminder('-1');
@@ -657,6 +667,12 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
         dueDate: dueDate || todayStr(),
         dueTime: isAllDay ? null : (dueTime || currentTimeStr()),
         isAllDay,
+        ...(isAllDay && allDayReminderMode !== 'legacy' ? {
+          allDayReminderMode,
+          allDayReminderTime,
+          allDayReminderStartDate: dueDate !== editTask?.dueDate
+            ? dueDate : (allDayReminderStartDate || dueDate),
+        } : {}),
         reminderOffset: finalRem !== '-1' ? parseInt(finalRem) : null,
         customReminderMins: null,
         cyclicType: finalCyc !== 'none' ? finalCyc : null,
@@ -861,7 +877,30 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
 
               {/* Properties */}
               <div className="properties-list mt-4">
+                {isAllDay && <div className="property-group">
+                  <div className={`property-row ${showAllDayReminderSheet ? 'active' : ''}`} onClick={() => {
+                    setShowAllDayReminderSheet(!showAllDayReminderSheet);
+                    setShowRemSheet(false); setShowCyclicSheet(false); setShowRepeatSheet(false);
+                  }}>
+                    <div className="property-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+                    <div className="property-content">
+                      <div className="property-title">{allDayReminderMode === 'legacy' ? 'Прежние настройки' : allDayReminderMode === 'off' ? 'Не напоминать' : `Напомнить в ${allDayReminderTime}`}</div>
+                      <div className="property-subtitle">{allDayReminderMode === 'daily' ? 'Каждый день до завершения' : allDayReminderMode === 'once' ? 'Только один раз' : 'Напоминание на весь день'}</div>
+                    </div>
+                  </div>
+                  {showAllDayReminderSheet && <div className="inline-options-panel all-day-task-reminder">
+                    {allDayReminderMode === 'legacy' && <p>Сейчас действует прежнее правило. Выберите личное напоминание, чтобы заменить его.</p>}
+                    <label className="all-day-task-choice"><input type="checkbox" checked={allDayReminderMode === 'daily' || allDayReminderMode === 'once'} onChange={e => setAllDayReminderMode(e.target.checked ? 'daily' : 'off')} /> Напоминать об этой задаче</label>
+                    {(allDayReminderMode === 'daily' || allDayReminderMode === 'once') && <>
+                      <div className="task-modal-time-label">Время напоминания</div>
+                      <TimePicker value={allDayReminderTime} onChange={setAllDayReminderTime} />
+                      <label className="all-day-task-choice"><input type="checkbox" checked={allDayReminderMode === 'daily'} onChange={e => setAllDayReminderMode(e.target.checked ? 'daily' : 'once')} /> Напоминать каждый день после переноса</label>
+                      <p>{allDayReminderMode === 'once' ? 'После первого дня уведомление больше не придёт.' : 'Пока задача не выполнена, уведомление будет приходить ежедневно.'}</p>
+                    </>}
+                  </div>}
+                </div>}
                 
+                {(!isAllDay || allDayReminderMode === 'legacy') && <>
                 <div className="property-group">
                   <div className={`property-row ${showRemSheet ? 'active' : ''}`} onClick={() => { setShowRemSheet(!showRemSheet); setShowCyclicSheet(false); setShowRepeatSheet(false); }}>
                     <div className="property-icon">
@@ -930,6 +969,8 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                     </div>
                   )})()}
                 </div>
+
+                </>}
 
                 <div className="property-group">
                   <div className={`property-row ${showRepeatSheet ? 'active' : ''}`} onClick={() => { setShowRepeatSheet(!showRepeatSheet); setShowRemSheet(false); setShowCyclicSheet(false); }}>

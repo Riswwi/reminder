@@ -389,6 +389,11 @@ main {
 }
 
 .task-modal-time-section { margin-top: 16px; }
+.all-day-task-reminder { display: flex; flex-direction: column; gap: 12px; }
+.all-day-task-reminder .tp-wheel-panel { max-width: 390px; }
+.all-day-task-reminder p { margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.4; }
+.all-day-task-choice { display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-color); }
+.all-day-task-choice input { width: 18px; height: 18px; accent-color: var(--primary-color); }
 .task-modal-time-label {
   font-size: 11px; font-weight: 700; text-transform: uppercase;
   letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px;
