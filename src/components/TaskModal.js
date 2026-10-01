@@ -15,10 +15,7 @@ function toDateStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 const todayStr = () => toDateStr(new Date());
-const currentTimeStr = () => {
-  const now = new Date();
-  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-};
+const defaultTaskTime = () => '10:00';
 
 // ─── Mini Calendar ────────────────────────────────────────────────────────────
 function MiniCalendar({ value, onChange, tasks = [] }) {
@@ -450,7 +447,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
   const [allDayReminderTime, setAllDayReminderTime] = useState('09:00');
   const [allDayReminderStartDate, setAllDayReminderStartDate] = useState(null);
   const [dueDate, setDueDate]   = useState(todayStr());
-  const [dueTime, setDueTime]   = useState(currentTimeStr);
+  const [dueTime, setDueTime]   = useState(defaultTaskTime);
   const [reminder, setReminder] = useState('-1');
   const [cyclic, setCyclic]     = useState('none');
   const [repeat, setRepeat]     = useState('none');
@@ -615,7 +612,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
         setAllDayReminderTime(/^([01]\d|2[0-3]):[0-5]\d$/.test(editTask.allDayReminderTime || '') ? editTask.allDayReminderTime : '09:00');
         setAllDayReminderStartDate(editTask.allDayReminderStartDate || editTask.dueDate || td);
         setDueDate(editTask.dueDate || td);
-        setDueTime(editTask.dueTime || '09:00');
+        setDueTime(editTask.dueTime || defaultTaskTime());
         setReminder(editTask.reminderOffset !== null ? String(editTask.reminderOffset) : '-1');
         setCyclic(editTask.cyclicType || 'none');
         setRepeat(editTask.repeatType || 'none');
@@ -631,7 +628,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
         setAllDayReminderTime('09:00');
         setAllDayReminderStartDate(editTask?.dueDate || td);
         setDueDate(editTask?.dueDate || td);
-        setDueTime(currentTimeStr());
+        setDueTime(defaultTaskTime());
         setReminder('-1');
         setCyclic('none');
         setRepeat('none');
@@ -665,7 +662,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
               .filter(item => item.text)
           : [],
         dueDate: dueDate || todayStr(),
-        dueTime: isAllDay ? null : (dueTime || currentTimeStr()),
+        dueTime: isAllDay ? null : (dueTime || defaultTaskTime()),
         isAllDay,
         ...(isAllDay && allDayReminderMode !== 'legacy' ? {
           allDayReminderMode,
@@ -791,7 +788,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                     const allDay = e.target.checked;
                     setIsAllDay(allDay);
                     if (!allDay) {
-                      setDueTime(currentTimeStr());
+                      setDueTime(defaultTaskTime());
                       if (reminder === '-1') setReminder('0');
                     }
                     else if (allDay) setReminder('-1');
