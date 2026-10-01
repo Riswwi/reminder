@@ -86,6 +86,7 @@ export async function POST(req) {
           isAllDay: task.isAllDay !== false,
           allDayReminderMode: task.allDayReminderMode ?? null,
           allDayReminderTime: task.allDayReminderTime ?? null,
+          allDayReminderCycleMins: task.allDayReminderCycleMins ?? 0,
           allDayReminderStartDate: task.allDayReminderStartDate ?? null,
           reminderOffset: task.reminderOffset ?? -1,
           customReminderMins: task.customReminderMins ?? 0,

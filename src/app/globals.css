@@ -396,6 +396,8 @@ main {
 .all-day-task-time-button { border-left: 0; border-right: 0; border-bottom: 0; background: transparent; cursor: pointer; text-align: left; }
 .all-day-task-time-button strong { color: var(--primary-color); font-size: 16px; }
 .all-day-task-time-panel { max-width: 390px; padding: 4px 0 14px; }
+.all-day-task-cycle-panel { padding: 4px 0 14px; }
+.all-day-task-cycle-panel .tp-wheel-panel { max-width: 390px; margin-top: 12px; }
 .all-day-task-controls p { margin: 0 0 10px; color: var(--text-muted); font-size: 12px; line-height: 1.4; }
 .all-day-task-legacy { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 62px; color: var(--text-muted); font-size: 13px; }
 .all-day-task-legacy button { flex: 0 0 auto; border: 0; background: transparent; color: var(--primary-color); font: inherit; font-weight: 700; cursor: pointer; }

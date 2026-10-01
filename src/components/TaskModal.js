@@ -444,7 +444,8 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
   const [priority, setPriority] = useState(1);
   const [isAllDay, setIsAllDay] = useState(true);
   const [allDayReminderMode, setAllDayReminderMode] = useState('daily');
-  const [allDayReminderTime, setAllDayReminderTime] = useState('09:00');
+  const [allDayReminderTime, setAllDayReminderTime] = useState('10:00');
+  const [allDayReminderCycleMins, setAllDayReminderCycleMins] = useState(0);
   const [allDayReminderStartDate, setAllDayReminderStartDate] = useState(null);
   const [dueDate, setDueDate]   = useState(todayStr());
   const [dueTime, setDueTime]   = useState(defaultTaskTime);
@@ -458,6 +459,8 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
 
   const [showRemSheet,    setShowRemSheet]    = useState(false);
   const [showAllDayReminderSheet, setShowAllDayReminderSheet] = useState(false);
+  const [showAllDayCycleSheet, setShowAllDayCycleSheet] = useState(false);
+  const [allDayCycleEditingCustom, setAllDayCycleEditingCustom] = useState(false);
   const [showCyclicSheet, setShowCyclicSheet] = useState(false);
   const [showRepeatSheet, setShowRepeatSheet] = useState(false);
   
@@ -609,7 +612,8 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
         setPriority(editTask.priority || 1);
         setIsAllDay(editTask.isAllDay !== false);
         setAllDayReminderMode(['daily', 'once', 'off'].includes(editTask.allDayReminderMode) ? editTask.allDayReminderMode : 'legacy');
-        setAllDayReminderTime(/^([01]\d|2[0-3]):[0-5]\d$/.test(editTask.allDayReminderTime || '') ? editTask.allDayReminderTime : '09:00');
+        setAllDayReminderTime(/^([01]\d|2[0-3]):[0-5]\d$/.test(editTask.allDayReminderTime || '') ? editTask.allDayReminderTime : '10:00');
+        setAllDayReminderCycleMins(Number.isInteger(Number(editTask.allDayReminderCycleMins)) && Number(editTask.allDayReminderCycleMins) > 0 && Number(editTask.allDayReminderCycleMins) < 1440 ? Number(editTask.allDayReminderCycleMins) : 0);
         setAllDayReminderStartDate(editTask.allDayReminderStartDate || editTask.dueDate || td);
         setDueDate(editTask.dueDate || td);
         setDueTime(editTask.dueTime || defaultTaskTime());
@@ -625,7 +629,8 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
         setPriority(1);
         setIsAllDay(true);
         setAllDayReminderMode('daily');
-        setAllDayReminderTime('09:00');
+        setAllDayReminderTime('10:00');
+        setAllDayReminderCycleMins(0);
         setAllDayReminderStartDate(editTask?.dueDate || td);
         setDueDate(editTask?.dueDate || td);
         setDueTime(defaultTaskTime());
@@ -634,6 +639,9 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
         setRepeat('none');
         setCustomRepeat(null);
       }
+      setShowAllDayReminderSheet(false);
+      setShowAllDayCycleSheet(false);
+      setAllDayCycleEditingCustom(false);
       setIsSaving(false);
       requestAnimationFrame(() => {
         titleRef.current?.focus();
@@ -667,6 +675,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
         ...(isAllDay && allDayReminderMode !== 'legacy' ? {
           allDayReminderMode,
           allDayReminderTime,
+          allDayReminderCycleMins,
           allDayReminderStartDate: dueDate !== editTask?.dueDate
             ? dueDate : (allDayReminderStartDate || dueDate),
         } : {}),
@@ -883,6 +892,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                     <span className="switch"><input type="checkbox" checked={allDayReminderMode === 'daily' || allDayReminderMode === 'once'} onChange={e => {
                       setAllDayReminderMode(e.target.checked ? 'daily' : 'off');
                       setShowAllDayReminderSheet(false);
+                      setShowAllDayCycleSheet(false);
                       setShowRemSheet(false); setShowCyclicSheet(false);
                     }} /><span className="slider round" /></span>
                   </label>}
@@ -891,10 +901,25 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
                       <span>Напоминать каждый день после переноса</span>
                       <span className="switch"><input type="checkbox" checked={allDayReminderMode === 'daily'} onChange={e => setAllDayReminderMode(e.target.checked ? 'daily' : 'once')} /><span className="slider round" /></span>
                     </label>
-                    <button type="button" className="all-day-task-time-button" aria-expanded={showAllDayReminderSheet} onClick={() => setShowAllDayReminderSheet(!showAllDayReminderSheet)}>
+                    <button type="button" className="all-day-task-time-button" aria-expanded={showAllDayReminderSheet} onClick={() => { setShowAllDayReminderSheet(!showAllDayReminderSheet); setShowAllDayCycleSheet(false); }}>
                       <span>Время напоминания</span><strong>{allDayReminderTime}</strong>
                     </button>
                     {showAllDayReminderSheet && <div className="all-day-task-time-panel"><TimePicker value={allDayReminderTime} onChange={setAllDayReminderTime} /></div>}
+                    <button type="button" className="all-day-task-time-button" aria-expanded={showAllDayCycleSheet} onClick={() => { setShowAllDayCycleSheet(!showAllDayCycleSheet); setShowAllDayReminderSheet(false); }}>
+                      <span>Цикл уведомлений</span><strong>{allDayReminderCycleMins ? getCyclicText(String(allDayReminderCycleMins)) : 'Без цикла'}</strong>
+                    </button>
+                    {showAllDayCycleSheet && <div className="all-day-task-cycle-panel">
+                      <RadioList name="allDayCyc" value={allDayReminderCycleMins === 0 ? 'none' : (allDayCycleEditingCustom || !customCyclics.includes(allDayReminderCycleMins) ? 'custom' : String(allDayReminderCycleMins))}
+                        onChange={value => {
+                          if (value === 'custom') { setAllDayCycleEditingCustom(true); if (!allDayReminderCycleMins) setAllDayReminderCycleMins(60); }
+                          else { setAllDayReminderCycleMins(value === 'none' ? 0 : Number(value)); setAllDayCycleEditingCustom(false); setShowAllDayCycleSheet(false); }
+                        }}
+                        options={[{ value: 'none', label: 'Без цикла' }, ...customCyclics.filter(mins => mins > 0 && mins < 1440).map(mins => ({ value: String(mins), label: getCyclicText(String(mins)) })), { value: 'custom', label: 'Свой интервал...' }]} />
+                      {allDayReminderCycleMins > 0 && (allDayCycleEditingCustom || !customCyclics.includes(allDayReminderCycleMins)) && <TimePicker
+                        value={`${String(Math.floor(allDayReminderCycleMins / 60)).padStart(2, '0')}:${String(allDayReminderCycleMins % 60).padStart(2, '0')}`}
+                        onChange={value => { const [hours, minutes] = value.split(':').map(Number); setAllDayReminderCycleMins(Math.max(1, hours * 60 + minutes)); }} />}
+                      <p>Повторы идут до конца дня. Если включено ежедневное напоминание, завтра цикл начнётся заново.</p>
+                    </div>}
                   </>}
                 </div>}
                 
