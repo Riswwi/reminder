@@ -436,7 +436,7 @@ const getRepeatText = (r, cr) => {
 };
 
 // ─── Main Modal ───────────────────────────────────────────────────────────────
-export default function TaskModal({ isOpen, onClose, editTask = null }) {
+export default function TaskModal({ isOpen, onClose, editTask = null, taskGroup = 'main' }) {
   const [title, setTitle]       = useState('');
   const [desc, setDesc]         = useState('');
   const [contentMode, setContentMode] = useState('description');
@@ -595,10 +595,11 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
     const unsub = onSnapshot(collection(db, 'tasks'), snapshot => {
       const arr = [];
       snapshot.forEach(d => arr.push({ id: String(d.id), ...d.data() }));
-      setTasks(arr);
+      const currentGroup = editTask?.taskGroup === 'unique' ? 'unique' : taskGroup;
+      setTasks(arr.filter(task => (task.taskGroup === 'unique' ? 'unique' : 'main') === currentGroup));
     });
     return () => unsub();
-  }, [isOpen]);
+  }, [isOpen, editTask?.taskGroup, taskGroup]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -663,6 +664,7 @@ export default function TaskModal({ isOpen, onClose, editTask = null }) {
 
       const taskData = {
         title: title.trim(), desc: desc.trim(), priority,
+        taskGroup: editTask ? (editTask.taskGroup === 'unique' ? 'unique' : 'main') : taskGroup,
         contentMode,
         checklist: contentMode === 'checklist'
           ? checklist

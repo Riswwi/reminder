@@ -150,7 +150,7 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
-export default function Dashboard() {
+export default function Dashboard({ taskGroup = 'main' }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sortMethod, setSortMethod] = useState('priority');
@@ -175,11 +175,11 @@ export default function Dashboard() {
         Promise.all(updates).catch(e => console.error('Rollover error:', e));
       }
 
-      setTasks(data);
+      setTasks(data.filter(task => (task.taskGroup === 'unique' ? 'unique' : 'main') === taskGroup));
       setLoading(false);
     });
     return () => unsub();
-  }, []);
+  }, [taskGroup]);
 
   const toggleTask = async (id, cur) => {
     try {

@@ -48,6 +48,9 @@ export default function RootLayout({ children }) {
                 <Link href="/" style={{ textDecoration: 'none' }}>
                   <button className={`tab-btn ${pathname === '/' ? 'active' : ''}`}>Мои задачи</button>
                 </Link>
+                <Link href="/unique" style={{ textDecoration: 'none' }}>
+                  <button className={`tab-btn ${pathname === '/unique' ? 'active' : ''}`}>Уник</button>
+                </Link>
                 <Link href="/calendar" style={{ textDecoration: 'none' }}>
                   <button className={`tab-btn ${pathname === '/calendar' ? 'active' : ''}`}>Календарь</button>
                 </Link>
@@ -92,6 +95,7 @@ export default function RootLayout({ children }) {
               isOpen={isTaskModalOpen}
               onClose={() => { setIsTaskModalOpen(false); setTaskToEdit(null); }}
               editTask={taskToEdit}
+              taskGroup={pathname === '/unique' ? 'unique' : 'main'}
             />
           )}
           
