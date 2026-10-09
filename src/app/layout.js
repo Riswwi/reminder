@@ -6,6 +6,7 @@ import "./globals.css";
 import TaskModal from '@/components/TaskModal';
 import SettingsModal from '@/components/SettingsModal';
 import ViewTaskPopup from '@/components/ViewTaskPopup';
+import AuthGate from '@/components/AuthGate';
 import { useState, useEffect } from 'react';
 
 export default function RootLayout({ children }) {
@@ -38,6 +39,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="ru">
       <body>
+        <AuthGate>
         <div
           className="app-container"
           style={{ '--content-max-width': '100%', '--calendar-max-width': '500px' }}
@@ -110,6 +112,7 @@ export default function RootLayout({ children }) {
             onClose={() => setIsSettingsModalOpen(false)}
           />
         </div>
+        </AuthGate>
       </body>
     </html>
   );

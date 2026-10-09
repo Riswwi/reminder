@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { collection, doc, getDocsFromServer, runTransaction } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { signOut } from 'firebase/auth';
+import { auth, db } from '../lib/firebase';
 import { makeTaskBackup, parseTaskBackup, taskFingerprint, MAX_BACKUP_BYTES } from '../lib/taskBackup';
 import { pingMobile } from '../lib/pingMobile';
 
@@ -309,6 +310,9 @@ export default function SettingsModal({ isOpen, onClose, contentWidth, setConten
         </div>
 
         <div className="modal-actions">
+          <button className="btn btn-secondary" onClick={() => signOut(auth)}>
+            Сменить аккаунт
+          </button>
           <button className="btn btn-secondary" onClick={closeSettings}>Закрыть</button>
         </div>
       </div>
